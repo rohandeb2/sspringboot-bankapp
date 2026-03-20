@@ -1,0 +1,37 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: {{ include "banking.fullname" . }}-vs
+  namespace: {{ .Values.namespace }}
+spec:
+  hosts:
+  - "api.rohandevops.co.in"
+  gateways:
+  - {{ include "banking.fullname" . }}-gateway
+  http:
+  - name: "banking-api-routes"
+    route:
+    - destination:
+        # 12 LPA LOGIC: This points to your 'Active' service from Argo Rollouts
+        host: {{ include "banking.fullname" . }}-active
+        port:
+          number: 8080
+    
+    # --- RESILIENCE STRATEGY (Senior Level) ---
+    retries:
+      attempts: 3
+      perTryTimeout: 2s
+      retryOn: gateway-error,connect-failure,refused-stream
+    
+    timeout: 10s
+    
+    # --- FAULT TOLERANCE ---
+    # If the backend is slow, don't let the user wait forever
+    corsPolicy:
+      allowOrigins:
+        - exact: "https://rohandevops.co.in"
+      allowMethods:
+        - POST
+        - GET
+      allowHeaders:
+        - content-type

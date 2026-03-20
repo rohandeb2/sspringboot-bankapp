@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: istio-ingressgateway
+  namespace: istio-system
+spec:
+  project: default
+  source:
+    repoURL: https://istio-release.storage.googleapis.com/charts
+    chart: gateway
+    targetRevision: 1.22.0
+    helm:
+      values: |
+        service:
+          type: LoadBalancer
+          # 12 LPA LOGIC: AWS-Specific Annotations for NLB
+          annotations:
+            service.beta.kubernetes.io/aws-load-balancer-type: "external"
+            service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
+            service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+          ports:
+            - name: status-port
+              port: 15021
+              targetPort: 15021
+            - name: http2
+              port: 80
+              targetPort: 8080
+            - name: https
+              port: 443
+              targetPort: 8443
+
+        autoscaling:
+          enabled: true
+          minReplicas: 2
+          maxReplicas: 5
+          targetCPUUtilizationPercentage: 80
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 2000m
+            memory: 1024Mi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: istio-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sonarqube
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://SonarSource.github.io/helm-charts-sonarqube
+    chart: sonarqube
+    targetRevision: 10.x.x
+    helm:
+      values: |
+        # 1. Database Configuration
+        postgresql:
+          enabled: true
+          postgresqlPassword: "rohan-secure-pass" # Use a Secret in real life
+          persistence:
+            size: 20Gi
+        
+        # 2. Persistence for Sonar Data (Plugins/Logs)
+        persistence:
+          enabled: true
+          size: 10Gi
+        
+        # 3. Resources (Sonar is memory-heavy)
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+          limits:
+            memory: "4Gi"
+            cpu: "2"
+
+        # 4. Ingress (Accessing the Dashboard)
+        ingress:
+          enabled: true
+          hosts:
+            - name: sonarqube.rohandevops.co.in
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: devsecops
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

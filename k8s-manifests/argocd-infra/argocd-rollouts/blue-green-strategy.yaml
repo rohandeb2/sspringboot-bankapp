@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: success-rate-check
+  namespace: argocd
+spec:
+  # --- 12 LPA LOGIC: AUTOMATED ROLLBACK ---
+  # If the Error Rate is > 1%, Argo will automatically flip back to "Blue" (Stable)
+  metrics:
+  - name: success-rate
+    interval: 1m
+    count: 5
+    successCondition: len(result) > 0 && result[0] >= 0.99
+    provider:
+      prometheus:
+        address: http://prometheus-operated.monitoring.svc.cluster.local:9090
+        query: |
+          sum(rate(http_requests_total{status!~"5.*", app="banking-api"}[1m])) 
+          / 
+          sum(rate(http_requests_total{app="banking-api"}[1m]))
+---
+# This is how the strategy is defined in your Rollout object
+# (Reference this logic in your banking-platform/templates/rollout.yaml)
+strategy:
+  blueGreen:
+    activeService: banking-api-active
+    previewService: banking-api-preview
+    # 1. Manual Gate: Wait for a human to verify the 'Preview' environment
+    autoPromotionEnabled: false 
+    # 2. Automated Gate: Run the Prometheus check defined above
+    prePromotionAnalysis:
+      templates:
+      - templateName: success-rate-check
+    # 3. Post-Switch Safety: Keep old pods for 2 minutes just in case of a quick rollback
+    scaleDownDelaySeconds: 120

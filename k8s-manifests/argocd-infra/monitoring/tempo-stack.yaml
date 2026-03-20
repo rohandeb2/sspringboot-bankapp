@@ -1,0 +1,72 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tempo-stack
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: tempo
+    targetRevision: 1.10.1 # Pin for stability
+    helm:
+      values: |
+        # 1. Identity Integration (IRSA)
+        serviceAccount:
+          create: false
+          name: tempo-sa
+
+        # 2. Resource Management (Preventing Node Eviction)
+        tempo:
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+
+          # 3. --- 12 LPA LOGIC: S3 STORAGE CONFIG ---
+          storage:
+            trace:
+              backend: s3
+              s3:
+                bucket: banking-prod-loki-logs-prod # Must match Terraform bucket name
+                region: us-east-1 # Change to your region
+                # IRSA handles the auth, so no access_keys here!
+          
+          # 4. Compactor Configuration (Cleaning up small files in S3)
+          compactor:
+            config:
+              compaction:
+                block_retention: 14d # Bank standard: 14 days of traces
+                compacted_block_retention: 1h
+
+          # 5. Receiver Configuration (The OpenTelemetry "Doors")
+          config: |
+            distributor:
+              receivers:
+                otlp:
+                  protocols:
+                    grpc:
+                      endpoint: 0.0.0.0:4317
+                    http:
+                      endpoint: 0.0.0.0:4318
+            
+            # 6. Search Optimization
+            ingester:
+              trace_idle_period: 15s
+              max_block_duration: 30m
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

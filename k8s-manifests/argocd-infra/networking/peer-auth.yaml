@@ -1,0 +1,11 @@
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: istio-system
+spec:
+  # --- 12 LPA LOGIC: ZERO-TRUST ENFORCEMENT ---
+  mtls:
+    # 'STRICT' mode means pods will REJECT any connection that isn't mTLS.
+    # This prevents "Man-in-the-Middle" attacks inside your AWS VPC.
+    mode: STRICT

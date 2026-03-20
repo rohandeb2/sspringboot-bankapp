@@ -1,0 +1,57 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loki-stack
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: 2.10.2
+    chart: loki-stack
+    helm:
+      values: |
+        loki:
+          # Use the ServiceAccount we created with IRSA
+          serviceAccount:
+            create: false
+            name: loki-sa
+          
+          # --- 12 LPA LOGIC: S3 STORAGE CONFIG ---
+          config:
+            schema_config:
+              configs:
+                - from: 2024-01-01
+                  store: boltdb-shipper
+                  object_store: s3
+                  schema: v11
+                  index:
+                    prefix: index_
+                    period: 24h
+            storage_config:
+              aws:
+                # Replace with your bucket name from Terraform
+                s3: s3://us-east-1/bankapp-prod-loki-logs-prod
+                s3forcepathstyle: true
+              boltdb_shipper:
+                active_index_directory: /data/loki/index
+                cache_location: /data/loki/cache
+
+        promtail:
+          enabled: true
+          # 12 LPA LOGIC: Ensure labels match Prometheus for correlation
+          config:
+            lokiAddress: http://{{ .Release.Name }}:3100/loki/api/v1/push
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

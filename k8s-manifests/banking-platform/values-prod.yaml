@@ -1,0 +1,69 @@
+# --- GLOBAL IDENTIFIERS ---
+environment: production
+team: fintech-core
+domain: rohandevops.co.in
+
+# --- NAMESPACE ---
+namespace: banking-prod
+
+# --- COMPUTE & SCALING (High Availability) ---
+replicaCount: 3 # Start with 3 for HA (across multiple AZs)
+
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# --- IMAGE (Production Registry) ---
+image:
+  repository: 1234567890.dkr.ecr.us-east-1.amazonaws.com/banking-api
+  tag: "v1.2.0-stable" # Always use specific tags in prod, NEVER "latest"
+  pullPolicy: IfNotPresent
+
+# --- RESOURCE GOVERNANCE (Guaranteed QoS) ---
+resources:
+  requests:
+    cpu: "500m"      # Half a core guaranteed
+    memory: "1Gi"    # 1GB RAM guaranteed
+  limits:
+    cpu: "1000m"     # Burst to 1 core
+    memory: "2Gi"    # Hard limit to prevent OOM killing node
+
+# --- SECURITY & AWS INTEGRATION (IRSA) ---
+serviceAccount:
+  create: true
+  # Links the K8s Pod to the IAM Role created in Terraform
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::1234567890:role/banking-prod-irsa-role
+
+# --- EXTERNAL SECRETS (AWS Secrets Manager) ---
+secrets:
+  enabled: true
+  awsSecretName: "prod/banking/db-credentials"
+  refreshInterval: "1h"
+
+# --- NETWORKING (Ingress/ALB) ---
+ingress:
+  enabled: true
+  className: alb
+  certificateArn: arn:aws:acm:us-east-1:1234567890:certificate/xyz
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    # AWS Certificate Manager ARN
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:1234567890:certificate/your-cert-id
+  hosts:
+    - host: api.rohandevops.co.in
+      paths:
+        - path: /
+          pathType: Prefix
+
+# --- OBSERVABILITY ---
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  scrapeTimeout: 10s

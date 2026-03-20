@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: banking-success-rate-check
+  namespace: argocd
+spec:
+  # --- 12 LPA LOGIC: DATA-DRIVEN GOVERNANCE ---
+  # This template defines what "Healthy" looks like for a Bank API.
+  metrics:
+  - name: success-rate
+    # 1. Frequency: Check every 1 minute for a total of 5 minutes
+    interval: 1m
+    count: 5
+    # 2. Success Condition: 99.5% of requests must be 2xx or 3xx
+    successCondition: len(result) > 0 && result[0] >= 0.995
+    # 3. Failure Limit: If the check fails 2 times, trigger an immediate Rollback
+    failureLimit: 2
+    provider:
+      prometheus:
+        # Replace with your actual Prometheus Service URL in EKS
+        address: http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090
+        # 4. The Query: Calculates the ratio of Non-5xx errors to Total Requests
+        query: |
+          sum(rate(http_requests_total{status!~"5.*", app="{{ `{{args.app-name}}` }}"}[2m]))
+          /
+          sum(rate(http_requests_total{app="{{ `{{args.app-name}}` }}"}[2m]))

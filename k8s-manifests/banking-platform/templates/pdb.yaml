@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "banking.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "banking.labels" . | nindent 4 }}
+spec:
+  # Ensures that at least 2 pods are ALWAYS running
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: {{ include "banking.fullname" . }}

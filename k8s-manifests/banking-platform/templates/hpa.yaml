@@ -1,0 +1,31 @@
+{{- if .Values.hpa.enabled -}}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "banking.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "banking.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "banking.fullname" . }}
+  minReplicas: {{ .Values.hpa.minReplicas | default 3 }}
+  maxReplicas: {{ .Values.hpa.maxReplicas | default 10 }}
+  metrics:
+    # --- CPU Scaling ---
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.targetCPU | default 70 }}
+    # --- Memory Scaling (12 LPA logic: Double Defense) ---
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.targetMemory | default 80 }}
+{{- end }}

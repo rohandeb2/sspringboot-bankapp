@@ -1,0 +1,48 @@
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: banking-prod-daily-backup
+  namespace: velero
+  labels:
+    component: disaster-recovery
+    env: production
+    backup-group: fintech-core
+spec:
+  # 1. RPO Logic: Run every 6 hours (4 times a day)
+  # In banking, 24-hour backups are too risky; 6 hours is much safer.
+  schedule: "0 */6 * * *"
+  
+  template:
+    # 2. Scope: Only backup the production banking namespace
+    includedNamespaces:
+      - banking-prod
+    
+    # 3. Retention (TTL): Keep backups for 30 days
+    # This meets most standard audit requirements for financial data.
+    ttl: 720h0m0s
+    
+    # 4. Volume Logic: Take snapshots of the AWS EBS volumes
+    # This captures your MySQL/Postgres data exactly as it is.
+    snapshotVolumes: true
+    
+    # 5. Consistency: Ensure we don't backup the 'preview' pods from Argo Rollouts
+    # We only want the 'Active' stable data.
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/managed-by: Helm
+    
+    # 6. Hooks: Quiesce the database (Optional but Pro-level)
+    # This pauses the DB for a millisecond to ensure a "Crash Consistent" backup.
+    hooks:
+      resources:
+        - name: banking-db-pause
+          includedNamespaces:
+            - banking-prod
+          pre:
+            - exec:
+                container: mysql
+                command: ["/bin/sh", "-c", "mysqladmin flush-tables --lock-all-tables"]
+          post:
+            - exec:
+                container: mysql
+                command: ["/bin/sh", "-c", "mysqladmin flush-tables --unlock-all-tables"]

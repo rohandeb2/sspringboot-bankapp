@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: minio
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: minio
+    targetRevision: 14.x.x
+    helm:
+      values: |
+        auth:
+          rootUser: "rohan-admin"
+          rootPassword: "secure-storage-pass"
+        persistence:
+          enabled: true
+          size: 50Gi
+        service:
+          type: ClusterIP
+        # Create the bucket where Velero will store data
+        defaultBuckets: "velero-backups"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: velero
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

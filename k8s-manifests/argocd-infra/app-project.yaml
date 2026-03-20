@@ -1,0 +1,67 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: banking-core-project
+  namespace: argocd
+  # Finalizers ensure the project isn't deleted until all apps inside it are gone
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: "Secure Governance for Springboot BankApp Production Environment"
+
+  # 1. Source: Only allow code from your specific, trusted GitHub Repo
+  # This prevents "Shadow IT" where someone tries to deploy from a personal repo
+  sourceRepos:
+    - 'https://github.com/rohan/Springboot-BankApp.git'
+
+  # 2. Destination: Restrict deployment to only the authorized Production cluster and namespace
+  destinations:
+    - namespace: banking-prod
+      server: https://kubernetes.default.svc
+      name: in-cluster
+
+  # 3. Cluster Resource Whitelist: Deny all cluster-level changes (Nodes, Roles, etc.)
+  # EXCEPT for the Namespace itself (so Argo can create it)
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+
+  # 4. Namespace Resource Whitelist: Restrict what objects the app can create
+  # In banking, we only allow standard app objects + Rollouts for Blue-Green
+  namespaceResourceWhitelist:
+    - group: 'apps'
+      kind: Deployment
+    - group: 'apps'
+      kind: StatefulSet
+    - group: 'argoproj.io'
+      kind: Rollout # Mandatory for your Blue-Green strategy
+    - group: 'argoproj.io'
+      kind: AnalysisRun
+    - group: 'networking.k8s.io'
+      kind: Ingress
+    - group: 'networking.k8s.io'
+      kind: NetworkPolicy
+    - group: ''
+      kind: Service
+    - group: ''
+      kind: ConfigMap
+    - group: ''
+      kind: Secret
+    - group: 'autoscaling'
+      kind: HorizontalPodAutoscaler
+
+  # 5. Roles (RBAC): Define who can do what within this project
+  # This is perfect for a 12 LPA interview—showing you understand Team Access
+  roles:
+    - name: read-only
+      description: Read-only privileges for the QA/Support team
+      policies:
+        - p, proj:banking-core-project:read-only, applications, get, banking-core-project/*, allow
+    - name: srv-admin
+      description: Full admin privileges for the DevOps/SRE team
+      policies:
+        - p, proj:banking-core-project:srv-admin, applications, *, banking-core-project/*, allow
+
+  # 6. Orphaned Resources Monitoring: Warn if resources in the namespace aren't in Git
+  orphanedResources:
+    warn: true

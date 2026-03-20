@@ -1,0 +1,26 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: {{ include "banking.fullname" . }}-gateway
+  namespace: {{ .Values.namespace }}
+spec:
+  # 12 LPA LOGIC: This selector must match the label on the 
+  # istio-ingressgateway pod we deployed in Step 3.
+  selector:
+    istio: ingressgateway 
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "api.rohandevops.co.in" # Your production domain
+  # - port: 
+  #     number: 443
+  #     name: https
+  #     protocol: HTTPS
+  #   tls:
+  #     mode: TERMINATE # Standard for AWS NLB + Istio
+  #     credentialName: banking-cert-secret
+  #   hosts:
+  #   - "api.rohandevops.co.in"

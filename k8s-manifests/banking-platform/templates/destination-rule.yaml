@@ -1,0 +1,35 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: {{ include "banking.fullname" . }}-dr
+  namespace: {{ .Values.namespace }}
+spec:
+  # This matches the Service name defined in your service.yaml
+  host: {{ include "banking.fullname" . }}-active
+  
+  trafficPolicy:
+    # --- 1. mTLS ENFORCEMENT (Data Plane) ---
+    tls:
+      mode: ISTIO_MUTUAL
+
+    # --- 2. LOAD BALANCING STRATEGY ---
+    loadBalancer:
+      simple: LEAST_CONN # Best for Banking: Sends traffic to the least busy pod
+
+    # --- 3. CIRCUIT BREAKER (Outlier Detection) ---
+    # 12 LPA LOGIC: If a pod returns 5xx errors 3 times in a row, 
+    # eject it from the load balancer for 30 seconds.
+    outlierDetection:
+      consecutive5xxErrors: 3
+      interval: 10s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 100
+
+    # --- 4. CONNECTION POOLING ---
+    # Limits the number of pending requests to prevent memory exhaustion
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 10
+        maxRequestsPerConnection: 10

@@ -1,0 +1,27 @@
+{{- if .Values.serviceMonitor.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "banking.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "banking.labels" . | nindent 4 }}
+    # CRITICAL: This label must match what your Prometheus is looking for
+    release: kube-prometheus-stack  
+spec:
+  selector:
+    matchLabels:
+      app: {{ include "banking.fullname" . }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.namespace }}
+  endpoints:
+    - port: http
+      path: {{ .Values.serviceMonitor.path | default "/actuator/prometheus" | quote }}
+      interval: {{ .Values.serviceMonitor.interval | default "30s" | quote }}
+      scrapeTimeout: 10s
+      # 12 LPA Logic: Relabeling for cleaner Grafana dashboards
+      relabelings:
+        - targetLabel: application
+          replacement: banking-core
+{{- end }}

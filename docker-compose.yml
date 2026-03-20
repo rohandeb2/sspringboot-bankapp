@@ -20,16 +20,22 @@ services:
       start_period: 30s
 
   mainapp:
-    image: ${DUSER}/${IMAGE}
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: bankapp
     restart: always
     depends_on:
       mysql:
         condition: service_healthy
     environment:
+      # Keep the format consistent (using Key: Value)
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      # OTEL_METRICS_EXPORTER: "none"
+      # OTEL_LOGS_EXPORTER: "none"
+      # OTEL_TRACES_EXPORTER: "none"
     expose:
       - "8080"
     networks:

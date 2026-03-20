@@ -1,0 +1,45 @@
+# Global Identifiers
+environment: prod
+team: fintech
+
+# 1. Namespace & Naming
+namespace: banking-prod
+
+# 2. Image Details
+image:
+  repository: rohandevops.co.in/banking-api
+  tag: "v1.0.1"
+  pullPolicy: Always
+
+# 3. Scaling & HA (12 LPA Logic)
+replicaCount: 3
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPU: 70
+
+# 4. Resources (Guaranteed QoS)
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+# 5. Security (AWS Integration)
+serviceAccount:
+  create: true
+  annotations: 
+    eks.amazonaws.com/role-arn: arn:aws:iam::1234567890:role/banking-app-role
+
+# 6. Database / External Secrets
+secrets:
+  awsSecretName: "prod/banking/db-creds" # Points to AWS Secrets Manager
+
+# 7. Networking
+ingress:
+  enabled: true
+  host: banking.rohandevops.co.in
+  certificateArn: ""

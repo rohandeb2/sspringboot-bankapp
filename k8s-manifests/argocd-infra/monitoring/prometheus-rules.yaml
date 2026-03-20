@@ -1,0 +1,207 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: banking-app-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+
+spec:
+  groups:
+
+  # ---------------------------
+  # 🔹 1. SERVICE AVAILABILITY
+  # ---------------------------
+  - name: service-availability
+    rules:
+    - alert: ServiceDown
+      expr: up{app="banking-core"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Service Down"
+        description: "Banking service is not reachable."
+
+  # ---------------------------
+  # 🔹 2. ERROR RATE
+  # ---------------------------
+  - name: application-errors
+    rules:
+    - alert: HighErrorRate
+      expr: |
+        (
+          rate(http_server_requests_seconds_count{application="banking-core", status=~"5.."}[5m])
+          /
+          rate(http_server_requests_seconds_count{application="banking-core"}[5m])
+        ) > 0.05
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: "High Error Rate"
+        description: "5xx error rate is above 5%."
+
+  # ---------------------------
+  # 🔹 3. LATENCY
+  # ---------------------------
+  - name: latency
+    rules:
+    - alert: HighLatency
+      expr: |
+        histogram_quantile(0.95,
+          rate(http_server_requests_seconds_bucket{application="banking-core"}[5m])
+        ) > 1.5
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High API Latency"
+        description: "P95 latency is above threshold."
+
+  # ---------------------------
+  # 🔹 4. CPU / MEMORY
+  # ---------------------------
+  - name: resource-usage
+    rules:
+    - alert: HighCPUUsage
+      expr: rate(container_cpu_usage_seconds_total{container="banking-api"}[5m]) > 0.8
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High CPU Usage"
+
+    - alert: HighMemoryUsage
+      expr: (container_memory_working_set_bytes{container="banking-api"} / container_spec_memory_limit_bytes{container="banking-api"}) > 0.85
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "High Memory Usage"
+
+  # ---------------------------
+  # 🔹 5. KUBERNETES HEALTH
+  # ---------------------------
+  - name: kubernetes-health
+    rules:
+    - alert: NodeNotReady
+      expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+      for: 5m
+      labels:
+        severity: critical
+
+    - alert: PodCrashLooping
+      expr: increase(kube_pod_container_status_restarts_total[10m]) > 3
+      for: 5m
+      labels:
+        severity: warning
+
+    - alert: PodNotReady
+      expr: kube_pod_status_ready{condition="false"} == 1
+      for: 10m
+      labels:
+        severity: warning
+
+  # ---------------------------
+  # 🔹 6. DATABASE HEALTH
+  # ---------------------------
+  - name: database
+    rules:
+    - alert: DBConnectionPoolHigh
+      expr: |
+        HikariCP_connections_active
+        / HikariCP_connections_max > 0.9
+      for: 2m
+      labels:
+        severity: warning
+
+    - alert: DatabaseHighLatency
+      expr: rate(mysql_global_status_slow_queries[5m]) > 5
+      for: 2m
+      labels:
+        severity: warning
+
+  # ---------------------------
+  # 🔹 7. DISK & INFRA
+  # ---------------------------
+  - name: infrastructure
+    rules:
+    - alert: LowDiskSpace
+      expr: |
+        node_filesystem_avail_bytes
+        / node_filesystem_size_bytes < 0.1
+      for: 5m
+      labels:
+        severity: critical
+
+    - alert: OOMKilled
+      expr: kube_pod_container_status_terminated_reason{reason="OOMKilled"} > 0
+      labels:
+        severity: critical
+
+  # ---------------------------
+  # 🔹 8. TRAFFIC / BUSINESS
+  # ---------------------------
+  - name: traffic
+    rules:
+    - alert: TrafficDrop
+      expr: |
+        rate(http_server_requests_seconds_count[5m])
+        <
+        (rate(http_server_requests_seconds_count[5m] offset 1h) * 0.5)
+      for: 5m
+      labels:
+        severity: critical
+
+    - alert: TrafficSpike
+      expr: |
+        rate(http_server_requests_seconds_count[5m])
+        >
+        (rate(http_server_requests_seconds_count[5m] offset 1h) * 2)
+      for: 5m
+      labels:
+        severity: warning
+
+  # ---------------------------
+  # 🔹 9. SECURITY
+  # ---------------------------
+  - name: security
+    rules:
+    - alert: AuthFailures
+      expr: rate(spring_security_auth_failures_total[5m]) > 20
+      for: 2m
+      labels:
+        severity: critical
+
+  # ---------------------------
+  # 🔹 10. QUEUE SYSTEM
+  # ---------------------------
+  - name: queues
+    rules:
+    - alert: QueueBacklog
+      expr: kafka_consumer_lag > 1000
+      for: 5m
+      labels:
+        severity: warning
+
+  # ---------------------------
+  # 🔹 11. TLS / SSL
+  # ---------------------------
+  - name: tls
+    rules:
+    - alert: SSLCertExpiringSoon
+      expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 15
+      for: 1h
+      labels:
+        severity: warning
+
+  # ---------------------------
+  # 🔹 12. BACKUP
+  # ---------------------------
+  - name: backup
+    rules:
+    - alert: BackupFailed
+      expr: velero_backup_failure_total > 0
+      labels:
+        severity: critical
