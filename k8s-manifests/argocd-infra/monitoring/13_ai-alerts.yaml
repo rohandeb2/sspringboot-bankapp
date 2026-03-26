@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: log-anomaly-alerts
+  namespace: monitoring
+spec:
+  groups:
+  - name: ai-log-alerts
+    rules:
+    - alert: HighLogAnomalyScore
+      expr: |
+        sum by (app) (rate({namespace="banking-prod"} | logfmt | __error__!="" [5m])) > 0
+      for: 2m
+      annotations:
+        summary: "AI detected structural anomaly in banking logs"

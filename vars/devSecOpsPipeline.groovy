@@ -116,13 +116,21 @@ def call(Map config = [:]) {
                 )
             }
             failure {
-                emailext (
-                    subject: "❌ FAILURE: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-                    body: """<p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'</p>
-                        <p>Check console output at: <a href='${env.BUILD_URL}'>${env.BUILD_URL}</a></p>""",
-                    to: "rohan-admin@example.com",
-                    from: "jenkins@rohandevops.co.in"
-                )
+                withCredentials([string(credentialsId: 'GEMINI_API_KEY', variable: 'GEMINI_API_KEY')]) {
+                    script {
+                        // Fetch logs and pipe to AI script
+                        sh "curl -u admin:password ${env.BUILD_URL}consoleText | python3 scripts/ai_rca.py > ai_report.txt"
+                        def aiReport = readFile('ai_report.txt')
+                        
+                        emailext (
+                            subject: "❌ FAILURE: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+                            body: """<p>FAILED: ${env.JOB_NAME}</p>
+                                    <p>AI ANALYSIS: ${aiReport}</p>""",
+                            to: "ruhondeb28@gmail.com", // From your Jenkinsfile
+                            from: "jenkins@rohandevops.co.in"
+                        )
+                    }
+                }
             }
             always {
                 cleanWs()

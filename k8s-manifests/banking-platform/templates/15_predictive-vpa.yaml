@@ -1,0 +1,22 @@
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: banking-predictive-scaler
+  namespace: {{ .Values.namespace }}
+spec:
+  targetRef:
+    apiVersion: "argoproj.io/v1alpha1"
+    kind: Rollout
+    name: {{ include "banking.fullname" . }}
+  updatePolicy:
+    updateMode: "Auto" # AI will adjust CPU/Memory requests automatically
+  resourcePolicy:
+    containerPolicies:
+      - containerName: "banking-api"
+        minAllowed:
+          cpu: "250m"
+          memory: "256Mi"
+        maxAllowed:
+          cpu: "1"
+          memory: "1Gi"
+        controlledResources: ["cpu", "memory"]
