@@ -1,0 +1,102 @@
+# This file is an ArgoCD Application that tells Argo CD:
+# “Install the kube-prometheus-stack Helm chart and apply these custom configurations.”
+
+apiVersion: argoproj.io/v1alpha1  # ArgoCD Application CRD API version
+kind: Application  # Defines an ArgoCD application
+metadata:
+  name: kube-prometheus-stack  # Name of the ArgoCD app
+  namespace: argocd  # ArgoCD control plane namespace
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io  # Ensures resources are deleted when app is deleted
+
+spec:
+  project: default  # ArgoCD project (logical grouping of apps)
+
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts  # tell ArgoCD where to find the Helm chart (Prometheus community repo)
+    targetRevision: 67.3.0   # Fixed chart version for stability
+    chart: kube-prometheus-stack  # tell ArgoCD which chart to deploy (Prometheus stack with Grafana and Alertmanager)
+
+    helm:
+      values: |  # Inline Helm values override
+      # this block of code will confifure the prometheus retention, resource limits, storage, and alerting rules.
+        prometheus:
+          prometheusSpec:
+            retention: 15d  # Keep metrics data for 15 days
+
+            resources:  # this amount of resources are allocated to the prometheus server for storing and processing metrics data.
+              requests:
+                memory: 2Gi  # Minimum memory guaranteed
+              limits:
+                memory: 4Gi  # Max memory usage allowed
+
+            #This tells Prometheus Whenever you create a Prometheus pod, also create a Persistent Volume Claim (PVC) of 20Gi using gp3
+            storageSpec:
+              volumeClaimTemplate:
+                spec:
+                  storageClassName: gp3  # AWS EBS gp3 storage class
+                  accessModes: ["ReadWriteOnce"]  # Volume mounted by single node
+                  resources:
+                    requests:
+                      storage: 20Gi  # Persistent storage size for Prometheus
+
+        # create a persistent storage of 10gb for grafana to store dashboards and data wihtout this dashborad will be deleted when grafana pod restarts 
+        grafana:
+          persistence:
+            enabled: true  # Enable persistent storage for dashboards
+            size: 10Gi  # Disk size for Grafana data
+
+          ingress:       # it expose the grafana to the public url
+            enabled: true  # Expose Grafana externally
+            ingressClassName: nginx  # Use NGINX ingress controller
+            hosts:
+              - grafana.rohandevops.co.in  # Public domain for Grafana UI
+
+        # Alertmanager configuration to route alerts to Slack channels based on severity
+        alertmanager:
+          config:
+            global:
+              resolve_timeout: 5m  # Time to wait before sending an alert, we use this because sometimes alerts can be flappy and we want to avoid sending too many notifications for the same issue.
+            route:                 # This is the root route for all alerts. It defines how alerts are grouped and where they are sent.
+              group_wait: 30s        # Time to wait before sending the first notification for a new alert group
+              group_interval: 5m     # Minimum time between notifications for the same alert group
+              repeat_interval: 4h    # Minimum time to wait before resending an alert if it is still firing
+              group_by: ['alertname', 'priority']  # Group alerts by their name and priority for better organization in notifications
+              receiver: slack-default  # Default Slack receiver
+
+              routes:
+                - match:
+                    severity: critical  # Match critical alerts
+                  receiver: slack-critical  # Send to critical Slack channel
+
+                - match:
+                    severity: warning  # Match warning alerts
+                  receiver: slack-warning  # Send to warning Slack channel
+
+            receivers:
+              - name: slack-critical  # Receiver for critical alerts
+                slack_configs:
+                  - api_url: "REPLACE_WITH_SECURE_SECRET"  # Slack webhook URL (should be stored securely)
+                    channel: "#alerts-critical"  # Slack channel for critical alerts
+
+              - name: slack-warning  # Receiver for warning alerts
+                slack_configs:
+                  - api_url: "REPLACE_WITH_SECURE_SECRET"  # Slack webhook URL
+                    channel: "#alerts-warning"  # Slack channel for warnings
+
+              - name: slack-default  # Default fallback receiver
+                slack_configs:
+                  - api_url: "REPLACE_WITH_SECURE_SECRET"  # Slack webhook URL
+                    channel: "#alerts-banking"  # Default alerts channel
+
+  destination:
+    server: https://kubernetes.default.svc  # Target Kubernetes cluster (in-cluster)
+    namespace: monitoring  # Namespace where resources will be deployed
+
+  syncPolicy:
+    automated:
+      prune: true  # Delete resources removed from Git
+      selfHeal: true  # Auto-correct drift from desired state
+
+    syncOptions:
+      - CreateNamespace=true  # Automatically create namespace if not exists

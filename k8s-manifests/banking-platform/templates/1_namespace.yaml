@@ -1,0 +1,38 @@
+apiVersion: v1  # Kubernetes core API version for Namespace resource
+kind: Namespace  # This resource creates a logical isolation boundary in Kubernetes
+
+metadata:  # Metadata block contains identifying information about the namespace
+  name: {{ required "namespace is required" .Values.namespace }}  # Namespace name from Helm values, defaults to "banking-default"; ⚠️ may fail if invalid or empty value is passed
+
+  labels:  # Labels are used for filtering, policy enforcement, and observability
+
+    pod-security.kubernetes.io/enforce: restricted  # Enforces restricted pod security standard (blocks privileged/root containers); ⚠️ may break workloads if not compliant
+
+    pod-security.kubernetes.io/enforce-version: latest  # Uses latest version of pod security policy; ⚠️ can introduce breaking changes on upgrades
+
+    env: {{ .Values.environment | default "prod" }}  # Environment label (prod/dev); defaults to prod if not defined; ⚠️ may mislabel environments
+
+    team: {{ .Values.team | default "fintech" }}  # Team ownership label; used for ownership tracking and multi-team clusters
+
+    managed-by: {{ .Release.Service }}  # Shows Helm as the managing tool; useful for tracking releases
+
+    istio-injection: enabled  # Enables Istio sidecar injection; ⚠️ will have no effect if Istio is not installed or misconfigured
+
+    monitoring: prometheus  # Custom label for monitoring systems like Prometheus; ⚠️ does nothing unless Prometheus is configured to use it
+
+  annotations:  # Annotations store non-identifying metadata used by tools {for integration + metadata}
+
+    description: "Production environment for Banking Microservices"  # Human-readable description of namespace
+
+    owner: {{ .Values.ownerEmail | default "ruhondeb28@gmail.com" }}  # Owner email; ⚠️ should be valid email to avoid issues in automation
+
+
+# annotation why used:
+# The flow is:
+# You add annotations in YAML
+# A tool (like AWS controller, Istio, Prometheus) reads them
+# The tool changes its behavior accordingly
+
+# why annotation used in this file:
+# I used annotations to store non-identifying metadata like description, owner, and last-updated for 
+# documentation and audit purposes, since Kubernetes does not use them for resource selection

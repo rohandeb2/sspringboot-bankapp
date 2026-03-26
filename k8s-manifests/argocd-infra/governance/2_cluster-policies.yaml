@@ -1,0 +1,52 @@
+#This is a Kyverno ClusterPolicy that enforces security and resource rules in your Kubernetes cluster.
+
+apiVersion: kyverno.io/v1  # API version for Kyverno policies
+kind: ClusterPolicy  # Cluster-wide policy (applies to entire Kubernetes cluster)
+metadata:
+  name: banking-guardrails  # Name of the policy (used to identify and manage it)
+spec:
+  validationFailureAction: Enforce  # Blocks resource creation if policy is violated (strict mode)
+  background: true  # Enables background scans of existing resources for violations
+  rules:
+    # RULE 1: Protect Karpenter from "Infinite Scaling"
+    - name: check-resource-limits  # Name of this validation rule
+      match:
+        any:
+        - resources:
+            kinds:
+            - Pod  # Applies this rule to Pods
+            namespaces:
+            - banking-prod  # Only applies in this namespace
+      validate:  # Validation logic for this rule->Check if the resource follows the rule
+        message: "Resource limits are REQUIRED so Karpenter can scale efficiently."  # Error message if rule fails
+        pattern:
+          spec:
+            containers:
+            - resources:
+                limits:
+                  cpu: "?*"  # "?*" -> This field MUST exist and must have some value
+                  memory: "?*"  # Ensures memory limit is defined
+
+    # RULE 2: Security - No Root Access
+    - name: disallow-root-user  # Name of this security rule
+      match:
+        any:
+        - resources:
+            kinds:
+            - Pod  # Applies to all Pods
+      validate:
+        message: "Running as root is forbidden in the Banking Cluster."  # Error message if rule fails
+        pattern:
+          spec:
+            securityContext:
+              runAsNonRoot: true  # Ensures containers do NOT run as root user
+
+
+
+      # You can add more rules here to enforce other policies like:
+      # image tag restrictions (no :latest)
+      # required labels
+      # namespace isolation
+      # disallow privileged containers
+      # security context enforcement
+      # network policies

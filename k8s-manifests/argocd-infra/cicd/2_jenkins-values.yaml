@@ -1,0 +1,182 @@
+# 2_jenkins-values.yaml - Final Production Version
+controller:
+  componentName: "jenkins-controller"
+  replicas: 1 
+  
+  # Injecting secrets from the 'github-oauth-secret' and 'jenkins-app-secrets'
+  extraEnvs:
+    - name: GITHUB_CLIENT_ID
+      valueFrom:
+        secretKeyRef:
+          name: github-oauth-secret
+          key: GITHUB_CLIENT_ID
+    - name: GITHUB_CLIENT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: github-oauth-secret
+          key: GITHUB_CLIENT_SECRET
+    - name: SONAR_QUBE_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: jenkins-app-secrets
+          key: SONAR_QUBE_TOKEN
+
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+
+  persistence:
+    enabled: true
+    existingClaim: jenkins-pvc
+    accessMode: ReadWriteOnce
+
+  installPlugins:
+    - kubernetes:4203.v1596b_6321429
+    - workflow-aggregator:596.v8c21c963d92d
+    - git:5.2.1
+    - configuration-as-code:1777.v305183013898
+    - prometheus:2.1.1
+    - role-strategy:734.v6394308e5e48
+    - sonar:2.17.2
+    - dependency-check-jenkins:5.5.0
+    - github-oauth:0.40
+    - mailer:463.vedf8358ee55d          # Required for standard Email
+    - email-ext:2.102                  # Required for Extended Email
+
+  configurationAsCode:
+    enabled: true
+    content: |
+      jenkins:
+        # 1. AUTHENTICATION (SSO)
+        securityRealm:
+          github:
+            githubWebUri: "https://github.com"
+            githubApiUri: "https://api.github.com"
+            clientID: "${GITHUB_CLIENT_ID}" 
+            clientSecret: "${GITHUB_CLIENT_SECRET}"
+            oauthScopes: "read:org,user:email"
+
+        # 2. AUTHORIZATION (RBAC)
+        authorizationStrategy:
+          roleBased:
+            roles:
+              global:
+                - name: "admin"
+                  permissions: ["Overall/Administer"]
+                  assignments: ["rohandeb2"]
+                - name: "developer"
+                  permissions: ["Overall/Read", "Job/Read", "Job/Build", "Job/Workspace"]
+                  assignments: ["banking-dev-team"]
+
+        # 3. CLOUD CONFIG (K8s Agents)
+        clouds:
+          - kubernetes:
+              name: "kubernetes"
+              namespace: "jenkins"
+              jenkinsUrl: "http://jenkins-controller.jenkins.svc.cluster.local:8080"
+              templates:
+                - name: "maven-agent"
+                  label: "maven"
+                  serviceAccount: "jenkins-agent-sa"
+                  annotations:
+                    - key: "eks.amazonaws.com/role-arn"
+                      value: "arn:aws:iam::123456789012:role/jenkins-agent-irsa-role"
+                  containers:
+                    - name: "maven"
+                      image: "maven:3.8.6-jdk-11"
+                      command: "sleep"
+                      args: "99d"
+                    - name: "jnlp"
+                      image: "jenkins/inbound-agent:4.10-4"
+                    containers:
+                    - name: "maven"
+                      image: "maven:3.8.6-jdk-11"
+                      command: "sleep"
+                      args: "99d"
+                    - name: "trivy"
+                      image: "aquasec/trivy:latest"
+                      command: "sleep"
+                      args: "99d"
+                    - name: "aws-cli"
+                      image: "amazon/aws-cli:latest"
+                      command: "sleep"
+                      args: "99d"
+
+      # 4. TOOLS (Auto-install Scanners)
+      tool:
+        sonarRunnerInstallation:
+          installations:
+            - name: "SonarScanner"
+              properties:
+                - installSource:
+                    installers:
+                      - sonarRunnerInstaller:
+                          id: "5.0.1.3006"
+        dependencyCheck:
+          installations:
+            - name: "DP-Check"
+              properties:
+                - installSource:
+                    installers:
+                      - dependencyCheckInstaller:
+                          id: "9.0.9"
+
+      # 5. CREDENTIALS (Sonar Token)
+      credentials:
+        system:
+          domainCredentials:
+            - credentials:
+                - string:
+                    scope: GLOBAL
+                    id: "sonar-token"
+                    secret: "${SONAR_QUBE_TOKEN}"
+
+      # 6. GLOBAL SYSTEM CONFIGURATION
+      unclassified:
+        # Email Notification (Standard)
+        mailer:
+          smtpHost: "smtp.gmail.com"
+          smtpPort: "465"
+          useSsl: true
+          defaultSuffix: "@gmail.com"
+          replyToAddress: "ruhondeb28@gmail.com"
+        
+        # Editable Email Notification (Extended)
+        extendedEmailPublisher:
+          smtpServer: "smtp.gmail.com"
+          smtpPort: "465"
+          useSsl: true
+          defaultSuffix: "@gmail.com"
+          adminRequiredForTemplateTesting: false
+
+        # SonarQube Server Link
+        sonarGlobalConfiguration:
+          serverSpecifications:
+            - name: "SonarQube-Server"
+              serverUrl: "http://sonarqube.monitoring.svc.cluster.local:9000"
+              credentialsId: "sonar-token"
+        
+        # # Shared Library Link
+        # globalLibraries:
+        #   libraries:
+        #     - name: "banking-lib"
+        #       retriever:
+        #         modernSCM:
+        #           scm:
+        #             github:
+        #               repoOwner: "rohandeb2"
+        #               repository: "jenkins-shared-library"
+        #       defaultVersion: "main"
+
+service:
+  type: LoadBalancer 
+  port: 8080
+
+agent:
+  enabled: true
+  kubernetes:
+    namespace: jenkins

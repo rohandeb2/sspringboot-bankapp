@@ -1,94 +1,98 @@
 # modules/alb/main.tf
 
 # 1. Security Group for ALB
-resource "aws_security_group" "alb" {
-  name        = "${var.project_name}-alb-sg"
-  description = "Allow HTTPS inbound traffic"
-  vpc_id      = var.vpc_id
+resource "aws_security_group" "alb" { # Creates a security group for ALB (load balancer)
+  name        = "${var.project_name}-alb-sg" # Name of the security group
+  description = "Allow HTTPS inbound traffic" # Description of purpose
+  vpc_id      = var.vpc_id # Attaches this security group to your VPC
 
   ingress {
-    description = "HTTPS from internet"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTPS from internet" # Rule description
+    from_port   = 443 # Start port (HTTPS)
+    to_port     = 443 # End port (HTTPS) When both are same → only one port is allowed
+    protocol    = "tcp" # Protocol used
+    cidr_blocks = ["0.0.0.0/0"] # Allow traffic from anywhere (public access)
   }
 
   ingress {
-    description = "HTTP redirect to HTTPS"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTP redirect to HTTPS" # Rule description
+    from_port   = 80 # Start port (HTTP)
+    to_port     = 80 # End port (HTTP)
+    protocol    = "tcp" # Protocol used
+    cidr_blocks = ["0.0.0.0/0"] # Allow traffic from anywhere
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port   = 0 # Start port (all ports)
+    to_port     = 0 # End port (all ports)
+    protocol    = "-1" # -1 means all protocols
+    cidr_blocks = ["0.0.0.0/0"] # Allow outbound traffic to anywhere
   }
 
-  tags = merge(var.common_tags, { Name = "${var.project_name}-alb-sg" })
+  tags = merge(var.common_tags, { Name = "${var.project_name}-alb-sg" }) # Adds tags (common + name)
 }
-
 # 2. Application Load Balancer
 resource "aws_lb" "main" {
   name               = "${var.project_name}-alb"
-  internal           = false
-  load_balancer_type = "application"
+  internal           = false  # Internet-facing ALB (public)
+  load_balancer_type = "application" # ALB for HTTP/HTTPS traffic
   security_groups    = [aws_security_group.alb.id]
   subnets            = var.public_subnet_ids
 
-  enable_deletion_protection = true # Production Best Practice
+  enable_deletion_protection = false # set to true Production Best Practice
 
   tags = merge(var.common_tags, { Name = "${var.project_name}-alb" })
 }
 
-# 3. Target Group for Spring Boot App
-resource "aws_lb_target_group" "app" {
-  name        = "${var.project_name}-tg"
-  port        = 8080 # Matches Bankapp port
-  protocol    = "HTTP"
-  vpc_id      = var.vpc_id
-  target_type = "ip" # Required for EKS Fargate/Nodes
+resource "aws_lb_target_group" "app" { # Creates a target group (where ALB sends traffic)
+  name        = "${var.project_name}-tg" # Name of target group
+  port        = 8080 # App runs on port 8080 (Bankapp)
+  protocol    = "HTTP" # Communication protocol
+  vpc_id      = var.vpc_id # Target group belongs to this VPC
+  target_type = "ip" # Targets are IPs (used for EKS pods)
 
   health_check {
-    enabled             = true
-    path                = "/actuator/health" # Uses Spring Actuator
-    interval            = 30
-    timeout             = 5
-    healthy_threshold   = 3
-    unhealthy_threshold = 3
+    enabled             = true # Enables health check
+    path                = "/actuator/health" # Endpoint to check app health
+    interval            = 30 # Check every 30 seconds
+    timeout             = 5 # Wait 5 seconds for response
+    healthy_threshold   = 3 # 3 successful checks = healthy
+    unhealthy_threshold = 3 # 3 failed checks = unhealthy
   }
 }
 
 # 4. HTTPS Listener
-resource "aws_lb_listener" "https" {
-  load_balancer_arn = aws_lb.main.arn
-  port              = "443"
-  protocol          = "HTTPS"
-  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06" # Modern TLS
-  certificate_arn   = var.certificate_arn
+resource "aws_lb_listener" "https" { # Listens for HTTPS traffic on ALB
+  load_balancer_arn = aws_lb.main.arn # Attach to ALB
+  port              = "443" # HTTPS port
+  protocol          = "HTTPS" # Secure protocol
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06" # TLS security policy
+  certificate_arn   = var.certificate_arn # SSL certificate for HTTPS
 
   default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
+    type             = "forward" # Forward traffic
+    target_group_arn = aws_lb_target_group.app.arn # Send traffic to target group (your app)
   }
 }
 
 # 5. HTTP to HTTPS Redirect
-resource "aws_lb_listener" "http_redirect" {
-  load_balancer_arn = aws_lb.main.arn
-  port              = "80"
-  protocol          = "HTTP"
+resource "aws_lb_listener" "http_redirect" { # Listens for HTTP traffic
+  load_balancer_arn = aws_lb.main.arn # Attach to ALB
+  port              = "80" # HTTP port
+  protocol          = "HTTP" # Protocol
 
   default_action {
-    type = "redirect"
+    type = "redirect" # Redirect instead of forward
+
     redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
+      port        = "443" # Redirect to HTTPS port
+      protocol    = "HTTPS" # Use HTTPS
+      status_code = "HTTP_301" # Permanent redirect
     }
   }
-}
+} 
+
+# User hits load balancer
+# Listener receives request
+# Listener says → “Send this to target group”
+# Target group sends request to your app

@@ -1,0 +1,49 @@
+#This file defines how external traffic enters your Istio service mesh
+#Istio is a tool that handles communication between services so your apps don’t have to worry about networking, security, or monitoring
+#Service mesh manages communication between services automatically
+
+#So, the below file does Accept traffic from the internet for my domain and bring it inside the cluster.
+apiVersion: networking.istio.io/v1alpha3 # Istio networking API version
+kind: Gateway # Defines how external traffic enters the Istio service mesh
+metadata:
+  name: {{ include "banking.fullname" . }}-gateway # Name of the Istio Gateway
+  namespace: {{ .Values.namespace }} # Namespace where Gateway is created
+spec:
+  selector:
+    istio: ingressgateway # “Apply this configuration to the component that has label istio=ingressgateway (the default Istio ingress controller)”
+  servers:
+  - port:
+      number: 80 # Exposes HTTP traffic on port 80
+      name: http # Logical port name
+      protocol: HTTP # Protocol type
+    hosts:
+    - "api.rohandevops.co.in" # Domain that this gateway will accept traffic for
+  # - port:
+  #     number: 443 # HTTPS port
+  #     name: https # Logical name
+  #     protocol: HTTPS # Protocol type
+  #   tls:
+  #     mode: TERMINATE # TLS termination happens at Istio Gateway
+  #     credentialName: banking-cert-secret # Kubernetes secret containing SSL cert
+  #   hosts:
+  #   - "api.rohandevops.co.in" # Same domain for HTTPS
+
+# User → Gateway → VirtualService → Kubernetes Service → Pod
+
+# What actually happens step-by-step
+
+# User hits:
+
+# https://api.rohandevops.co.in
+# Traffic reaches your EKS cluster (via LoadBalancer)
+
+# It goes to:
+# 👉 Istio Ingress Gateway (because of this 👇)
+
+# selector:
+#   istio: ingressgateway
+# Gateway checks:
+# Port (80 / 443) ✅
+# Domain (api.rohandevops.co.in) ✅
+# Then it says:
+# 👉 “Okay, I’ll accept this request”

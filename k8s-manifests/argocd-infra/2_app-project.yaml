@@ -1,0 +1,85 @@
+# AppProject = Security boundary ✔ Controls repo + namespace + resources ✔ Mandatory in production ✔ Prevents cluster misuse
+
+apiVersion: argoproj.io/v1alpha1 # Argo CD API version
+kind: AppProject # Logical grouping + governance boundary for Argo CD applications
+metadata:
+  name: banking-core-project # Name of the Argo CD project
+  namespace: argocd # Must exist in Argo CD namespace
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io # Ensures safe deletion of project and its resources by cleaning up child resources first
+spec:
+  description: "Secure Governance for Springboot BankApp Production Environment" # Project purpose
+
+  sourceRepos:
+    - 'https://github.com/rohan/Springboot-BankApp.git' # Only this Git repo is allowed as source (security control)
+
+  destinations:
+    - namespace: banking-prod # Apps can deploy only to this namespace, so we are creating a custom namespace for better isolation and security
+      server: https://kubernetes.default.svc # Only this cluster (in-cluster)
+      name: in-cluster # Logical name for cluster
+
+  # Applications in this project are ONLY allowed to create Namespace at cluster level — nothing else
+  clusterResourceWhitelist:
+    - group: '' # Core API group
+      kind: Namespace # Only Namespace creation allowed at cluster level (others denied)
+
+  namespaceResourceWhitelist:
+    - group: 'apps' # Allow apps to create Deployments, StatefulSets, etc. in the target namespace
+      kind: Deployment # Allow Deployment creation
+    - group: 'apps'
+      kind: StatefulSet # Allow Stateful apps
+    - group: 'argoproj.io'
+      kind: Rollout # Required for Argo Rollouts (Blue-Green/Canary)
+    - group: 'argoproj.io'
+      kind: AnalysisRun # Required for pre/post deployment analysis
+    - group: 'networking.k8s.io'
+      kind: Ingress # Allow exposing services externally
+    - group: 'networking.k8s.io'
+      kind: NetworkPolicy # Allow network security rules
+    - group: '' # Core API group
+      kind: Service # Allow service creation
+    - group: ''
+      kind: ConfigMap # Allow configuration storage
+    - group: ''
+      kind: Secret # Allow sensitive data storage
+    - group: 'autoscaling'
+      kind: HorizontalPodAutoscaler # Allow auto-scaling
+
+  roles: # Define user roles and permissions within this project
+    - name: read-only # Role for QA/Support team
+      description: Read-only privileges for the QA/Support team
+      policies:
+        - p, proj:banking-core-project:read-only, applications, get, banking-core-project/*, allow # Can only view apps
+
+    - name: srv-admin # Role for DevOps/SRE team
+      description: Full admin privileges for the DevOps/SRE team
+      policies:
+        - p, proj:banking-core-project:srv-admin, applications, *, banking-core-project/*, allow # Full control over apps
+
+  orphanedResources:
+    warn: true # Warn about resources that exist in the cluster but are not defined in Git (potential drift)
+
+
+# ✅ group: '' (empty string)
+
+# 👉 Means: Core API Group
+
+# This is the default Kubernetes group
+
+# Includes resources like:
+# Pod
+# Service
+# ConfigMap
+# Secret
+# Namespace
+
+
+# ✅ group: "apps"
+
+# 👉 Means: Apps API Group
+
+# Includes:
+# Deployment
+# StatefulSet
+# DaemonSet
+# ReplicaSet

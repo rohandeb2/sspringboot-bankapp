@@ -1,0 +1,62 @@
+#This file create an argocd application in argocd to deploy the Tempo stack, which is a distributed tracing system.
+# tempo is used to collect and store trace data from your applications, allowing you to monitor and troubleshoot performance issues.
+# suppose a user is experiencing slow response so we can go through the trace data and find the root cause of the issue
+
+apiVersion: argoproj.io/v1alpha1 # ArgoCD CRD version for Application
+kind: Application # Defines an ArgoCD Application resource
+metadata:
+  name: tempo-stack # Name of this ArgoCD application
+  namespace: argocd # Namespace where ArgoCD is installed and manages apps
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io # Ensures ArgoCD cleans up resources on deletion
+spec:
+  project: default # ArgoCD project this app belongs to
+  source:
+    repoURL: https://grafana.github.io/helm-charts # Git/Helm repo containing the chart
+    chart: tempo # Helm chart name to deploy
+    targetRevision: 1.10.1 # Pin chart version for stability
+    helm:
+      values: | # Inline Helm values overriding chart defaults
+        serviceAccount:
+          create: false      # Do not create a new SA, use existing
+          name: tempo-sa     # Name of the existing service account (e.g., with IRSA)
+        tempo:               # Tempo-specific configuration
+          resources:         # how much CPU and memory to request/limit for Tempo components
+            requests:
+              cpu: 500m       # Minimum CPU requested
+              memory: 1Gi     # Minimum memory requested
+            limits:
+              cpu: 1000m      # Max CPU allowed
+              memory: 2Gi     # Max memory allowed
+          storage:            # where tempo will store trace data
+            trace:
+              backend: s3     # Use S3 as backend for trace storage
+              s3:
+                bucket: bankapp-prod-loki-logs-prod      # S3 bucket name for traces
+                region: us-east-1                        # AWS region for the bucket
+          compactor:           # Compactor configuration for trace data retention and rollup
+            config:
+              compaction:      # compaction means combining smaller trace blocks into larger ones for efficiency
+                block_retention: 14d                 # Retain trace blocks for 14 days
+                compacted_block_retention: 1h        # Keep compacted blocks for 1 hour
+          config: |                             # this block is for additional Tempo configuration in YAML format
+            distributor:                       # it’s the first component that receives all traces from applications.
+              receivers:                       # it define how Tempo receives trace data from applications
+                otlp:
+                  protocols:
+                    grpc:
+                      endpoint: 0.0.0.0:4317            # OTLP gRPC endpoint to receive traces
+                    http:
+                      endpoint: 0.0.0.0:4318            # OTLP HTTP endpoint to receive traces
+            ingester:                       # it handles processing and storing of trace data into the backend (S3 in this case)
+              trace_idle_period: 15s             # Time to wait before 
+              max_block_duration: 30m                # Max duration of trace blocks before rollup
+  destination:
+    server: https://kubernetes.default.svc # Deploy to this Kubernetes cluster
+    namespace: monitoring # Target namespace for the deployment
+  syncPolicy:
+    automated:
+      prune: true # Automatically delete resources removed from git/Helm
+      selfHeal: true # Automatically revert drifted resources to desired state
+    syncOptions:
+      - CreateNamespace=true # Create target namespace if it doesn't exist

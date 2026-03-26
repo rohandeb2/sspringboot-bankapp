@@ -5,7 +5,7 @@ variable "project_name" {
 
 variable "common_tags" {
   description = "Common tags applied to all resources"
-  type        = map(string)
+  type        = map(string) # key-value pairs for tagging
   default     = {}
 }
 

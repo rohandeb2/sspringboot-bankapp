@@ -17,3 +17,6 @@ variable "acm_domain_validation_options" {
   description = "Output from the ACM module for DNS validation"
   type        = any
 }
+variable "certificate_arn" {
+  type = string
+}

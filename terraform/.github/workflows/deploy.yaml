@@ -1,20 +1,19 @@
+# once run all terraform via command and then correct the code to match the terraform code and then run the terraform apply command
+
+
 name: "Terraform Production Deployment"
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - 'terraform/**' # Only run if infra code changes
+    branches: [main]
+    paths: ['terraform/**']
   pull_request:
-    branches:
-      - main
-    paths:
-      - 'terraform/**'
+    branches: [main]
+    paths: ['terraform/**']
 
 permissions:
-  id-token: write # Required for OIDC
-  contents: read  # Required to checkout code
+  id-token: write      # Required for OIDC AWS authentication
+  contents: read       # Required to checkout code
   pull-requests: write # Required to post plan comments on PRs
 
 jobs:
@@ -22,13 +21,36 @@ jobs:
     name: "Terraform Action"
     runs-on: ubuntu-latest
     env:
-      # Use the directory where your prod main.tf lives
       TF_WORKING_DIR: "./infrastructure/prod"
       
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # --- 1. TFLINT (Linting for logic and best practices) ---
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.50.0
+
+      - name: Init TFLint
+        run: tflint --init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+      - name: Run TFLint
+        run: tflint -f compact
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+      # --- 2. CHECKOV (Static Analysis for Security) ---
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: ${{ env.TF_WORKING_DIR }}
+          framework: terraform
+          soft_fail: false # Blocks the build if security violations are found
+          output_format: cli
+
+      # --- 3. SETUP TERRAFORM ---
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -48,25 +70,34 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform fmt -check
 
+      # --- 4. TERRAFORM PLAN (Runs on PRs and Pushes) ---
       - name: Terraform Plan
         id: plan
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform plan -no-color -input=false -var-file="terraform.tfvars"
         continue-on-error: true
 
-      # This step helps during code review by posting the plan result back to the PR
+      # --- 5. PR COMMENTING (Visibility for Reviewers) ---
       - name: Update Pull Request
         uses: actions/github-script@v7
         if: github.event_name == 'pull_request'
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const output = `#### Terraform Plan 📖 \`${{ steps.plan.outcome }}\`
+            const output = `#### Terraform Format and Style 🖌 \`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️ \`${{ steps.init.outcome }}\`
+            #### Terraform Plan 📖 \`${{ steps.plan.outcome }}\`
+            
             <details><summary>Show Plan</summary>
-            \`\`\`\n
+            
+            \`\`\`hcl
             ${{ steps.plan.outputs.stdout }}
             \`\`\`
-            </details>`;
+            
+            </details>
+            
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+            
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -74,6 +105,12 @@ jobs:
               body: output
             })
 
+      # Fail the job if Plan failed (after the comment is posted)
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+      # --- 6. TERRAFORM APPLY (Only on Merge/Push to Main) ---
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         working-directory: ${{ env.TF_WORKING_DIR }}

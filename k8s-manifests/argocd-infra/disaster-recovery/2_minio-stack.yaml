@@ -1,0 +1,34 @@
+#This file deploys MinIO using ArgoCD so that it is managed as code.
+# MinIO acts as a persistent object storage for Velero backups
+
+apiVersion: argoproj.io/v1alpha1  # ArgoCD Application CRD API version (used to define apps in ArgoCD)
+kind: Application  # Declares this as an ArgoCD Application resource
+metadata:
+  name: minio  # Name of the ArgoCD application (identifier inside ArgoCD)
+  namespace: argocd  # Namespace where ArgoCD controller is running
+spec:
+  project: default  # ArgoCD project this app belongs to (used for RBAC and grouping)
+  source:
+    repoURL: https://charts.bitnami.com/bitnami  # Helm chart repository for MinIO
+    chart: minio  # Name of the Helm chart to deploy
+    targetRevision: 14.x.x  # Specific version of the chart (pinning for stability)
+    helm:
+      values: |  # Helm values to configure MinIO deployment
+        auth:
+          rootUser: "rohan-admin"  # Admin username for MinIO
+          rootPassword: "secure-storage-pass"  # Admin password for MinIO
+        persistence:
+          enabled: true  # Enable persistent storage for MinIO data
+          size: 50Gi  # Allocate 50Gi for MinIO data storage
+        service:
+          type: ClusterIP  # Internal-only service (not exposed externally)
+        defaultBuckets: "velero-backups"  # Create a default bucket for Velero backups
+  destination:
+    server: https://kubernetes.default.svc  # Target Kubernetes cluster (local cluster where ArgoCD runs)
+    namespace: velero  # Namespace where MinIO will be deployed
+  syncPolicy:
+    automated:
+      prune: true  # Automatically delete resources if removed from Git
+      selfHeal: true  # Auto-correct drift between cluster and Git
+    syncOptions:
+      - CreateNamespace=true  # Automatically create namespace if it doesn’t exist

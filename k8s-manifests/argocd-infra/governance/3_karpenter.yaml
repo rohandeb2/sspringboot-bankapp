@@ -1,0 +1,45 @@
+# we created this file to deploy karpenter using argocd so that we can manage it as code and ensure it is consistently applied across our cluster.
+#Karpenter is an open-source Kubernetes node autoscaler that automatically creates and deletes worker nodes in your cluster based on the workload.
+
+apiVersion: argoproj.io/v1alpha1  # ArgoCD Application CRD API version (used to define apps in ArgoCD)
+kind: Application  # Declares this as an ArgoCD Application resource
+metadata:
+  name: karpenter  # Name of the ArgoCD application (identifier inside ArgoCD)
+  namespace: argocd  # Namespace where ArgoCD controller is running
+spec:
+  project: default  # ArgoCD project this app belongs to (used for RBAC and grouping)
+  source:
+    repoURL: https://charts.karpenter.sh  # Helm chart repository for Karpenter
+    chart: karpenter  # Name of the Helm chart to deploy
+    targetRevision: 0.37.x  # Specific version of the chart (pinning for stability in production)
+    helm:
+      values: |       # we are telling karpnter how to run what permission it has and what resources it can manage
+        serviceAccount:        # This block is used to give Karpenter permissions to interact with AWS and Kubernetes.
+          create: true         # Create a Kubernetes ServiceAccount for Karpenter
+          name: karpenter-sa   # Name of the ServiceAccount
+          annotations:
+            eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/bankapp-karpenter-controller-irsa   # IAM Role linked via IRSA for AWS permissions
+        
+        settings:                        # Karpenter-specific settings for cluster management
+          clusterName: bankapp-prod-eks       # Name of the EKS cluster Karpenter will manage
+          # interruptionQueue: bankapp-karpenter-interruption  # SQS queue for handling spot interruptions
+          featureGates:
+            drift: true                       # Enables drift detection for nodes (auto-reconciliation)
+        
+        controller:               # only these resources are assigned to karpenter controller and it will manage only these resources 
+          resources:
+            requests:
+              cpu: 100m  # Minimum CPU requested for Karpenter controller pod
+              memory: 512Mi  # Minimum memory requested
+            limits:
+              cpu: 1000m  # Maximum CPU Karpenter can use
+              memory: 1Gi  # Maximum memory Karpenter can use
+  destination:
+    server: https://kubernetes.default.svc  # Target Kubernetes cluster (local cluster where ArgoCD is running)
+    namespace: karpenter  # Namespace where Karpenter will be deployed
+  syncPolicy:
+    automated:
+      prune: true  # Automatically delete resources if removed from Git (GitOps cleanup)
+      selfHeal: true  # Auto-correct drift between cluster and Git
+    syncOptions:
+      - CreateNamespace=true  # Create namespace automatically if it does not exist

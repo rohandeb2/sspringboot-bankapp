@@ -1,0 +1,40 @@
+# This file creates two services that allow safe Blue-Green deployments by separating live traffic and test traffic.
+# with the hlep fo this file pod can communicate inside cluster internally
+apiVersion: v1 # Core Kubernetes API version
+kind: Service # Defines a Service to expose pods internally
+metadata:
+  name: {{ include "banking.fullname" . }}-active # Service name for LIVE traffic
+  namespace: {{ .Values.namespace }} # Namespace where service is deployed
+  labels:
+    {{- include "banking.labels" . | nindent 4 }} # Common labels for identification
+  annotations:
+    prometheus.io/scrape: "true" # Enables Prometheus to scrape metrics from this service
+    prometheus.io/path: "/actuator/prometheus" # Endpoint where metrics are exposed
+    prometheus.io/port: "8080" # Port on which metrics endpoint is available
+spec:
+  type: ClusterIP # Internal service accessible only within the cluster
+  selector:
+    app: {{ include "banking.fullname" . }} # Argo Rollouts dynamically injects pod-template-hash to route ONLY to stable (active) pods
+  ports:
+    - name: http # Logical name of the port
+      protocol: TCP # Uses TCP protocol
+      port: 80 # Service port exposed inside cluster
+      targetPort: http # Maps to container port named "http"
+---
+# --- SERVICE 2: THE QA (PREVIEW) GATEWAY ---
+apiVersion: v1 # Core Kubernetes API version
+kind: Service # Defines a Service to expose pods internally
+metadata:
+  name: {{ include "banking.fullname" . }}-preview # Service name for NEW version testing
+  namespace: {{ .Values.namespace }} # Namespace where service is deployed
+  labels:
+    {{- include "banking.labels" . | nindent 4 }} # Common labels for identification
+spec:
+  type: ClusterIP # Internal service for testing (not exposed to public users by default)
+  selector:
+    app: {{ include "banking.fullname" . }} # Argo Rollouts dynamically maps this to NEW (preview) pods during deployment
+  ports:
+    - name: http # Logical name of the port
+      protocol: TCP # Uses TCP protocol
+      port: 80 # Service port exposed inside cluster
+      targetPort: http # Maps to container port named "http"

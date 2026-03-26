@@ -6,7 +6,7 @@
 {{/* Standard Labels */}}
 {{- define "banking.labels" -}}
 app: {{ include "banking.fullname" . }}
-env: {{ .Values.environment }}
-team: {{ .Values.team }}
+env: {{ required "environment is required" .Values.environment }}
+team: {{ required "team is required" .Values.team }}
 managed-by: {{ .Release.Service }}
 {{- end -}}

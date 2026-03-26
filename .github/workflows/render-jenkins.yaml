@@ -1,0 +1,41 @@
+# I convert my Helm-based Jenkins configuration into ready-to-run Kubernetes YAML, store it in Git, and let ArgoCD deploy it. This way, 
+# Git is the source of truth, deployment is predictable, and it’s easy to audit and secure."
+
+name: Render Jenkins Manifests (AWS)
+on:
+  push:
+    paths:
+      - 'k8s-manifests/cicd/2_jenkins-values.yaml'
+permissions:
+  contents: write  # Allow the workflow to push changes back to the repository
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4 # Updated to v4 for latest security
+
+      # 1. Install Helm (Using a generic installer instead of the Azure-branded one)
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      # 2. Render Raw YAML
+      - name: Render Raw YAML
+        run: |
+          helm repo add jenkins https://charts.jenkins.io
+          helm repo update
+          # This takes your 'input' and creates the 'output' ArgoCD will use
+          helm template jenkins jenkins/jenkins \
+            --namespace jenkins \
+            -f k8s-manifests/cicd/2_jenkins-values.yaml > k8s-manifests/cicd/3_jenkins-all-manifests.yaml
+
+      # 3. Commit and Push back to Git
+      - name: Commit and Push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add k8s-manifests/cicd/3_jenkins-all-manifests.yaml
+          # [skip ci] is crucial to prevent an infinite loop!
+          git commit -m "chore: auto-render jenkins manifests [skip ci]" || exit 0
+          git push

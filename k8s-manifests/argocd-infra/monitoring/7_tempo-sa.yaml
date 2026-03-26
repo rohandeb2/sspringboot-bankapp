@@ -1,0 +1,17 @@
+# This file defins a serviec account for tempo with IRSA annotations to allow it to access S3 for storing traces. 
+# It also includes security best practices for token expiration and regional STS endpoints.
+
+apiVersion: v1                   # Core Kubernetes API version for ServiceAccounts
+kind: ServiceAccount              # Defines a ServiceAccount resource
+metadata:
+  name: tempo-sa                  # Name of the ServiceAccount
+  namespace: monitoring           # Namespace where Tempo runs
+  labels:
+    app.kubernetes.io/name: tempo-stack           # App name label
+    app.kubernetes.io/instance: tempo-stack # Helm release or stack instance
+    app.kubernetes.io/component: distributed-tracing # App component type
+    env: production                        # Environment label
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/tempo-s3-role # IAM role for Tempo pod to access S3 (IRSA)
+    eks.amazonaws.com/sts-regional-endpoints: "true" # Use regional STS endpoints for token issuance (security best practice)
+    eks.amazonaws.com/token-expiration: "86400"     # Token validity in seconds (24h)

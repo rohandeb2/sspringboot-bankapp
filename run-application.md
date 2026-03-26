@@ -1,3 +1,120 @@
+#aws console dependency order:
+🟢 1. Bootstrap (FIRST EVER STEP)
+Create S3 bucket (Terraform state)
+Enable:
+versioning
+encryption
+Create DynamoDB table (state locking)
+🟢 2. IAM (FOUNDATION FOR EVERYTHING)
+Create IAM roles & policies first
+(You will use these in ALL services)
+🟢 3. KMS (Encryption Layer)
+Create:
+aws_kms_key
+aws_kms_alias
+🟢 4. VPC (NETWORK FOUNDATION)
+Step-by-step order:
+Create aws_vpc
+Create 2 public subnets
+Create 2 private_app subnets
+Create 2 private_data subnets
+Create Internet Gateway (IGW)
+Attach IGW to VPC
+Create Elastic IP (EIP)
+Create NAT Gateway
+attach EIP
+place in public subnet
+Create Route Tables
+Public route table → route to IGW
+Private route table → route to NAT
+Create Route Table Associations
+public subnets → public RT
+private_app → private RT
+private_data → private RT
+🟢 5. Security Groups
+Create:
+SG for EKS nodes
+SG for RDS
+SG for ALB
+
+👉 Must be after VPC
+
+🟢 6. EKS Cluster (CONTROL PLANE)
+Create IAM role for EKS cluster
+Attach:
+AmazonEKSClusterPolicy
+Create EKS Cluster
+Create OIDC provider (VERY IMPORTANT)
+🟢 7. EKS Node Group (WORKERS)
+Create IAM role for node group
+Attach policies:
+Worker node policy
+CNI policy
+ECR read policy
+Create EKS Node Group
+🟢 8. Karpenter (Autoscaling)
+Create:
+IAM role for Karpenter nodes
+Instance profile
+Attach required policies
+Create:
+Karpenter controller IAM policy
+IRSA (module karpenter_irsa)
+🟢 9. ALB (LOAD BALANCER)
+Create ALB security group
+Create Application Load Balancer
+Create Target Group
+Create Listener (HTTP)
+Create Listener (HTTPS)
+
+👉 Depends on:
+
+EKS / backend targets
+🟢 10. ACM (SSL CERTIFICATE)
+Create ACM certificate
+Create Route53 validation record
+Validate certificate
+🟢 11. Route 53 (DNS)
+Create hosted zone (if not exists)
+Create records:
+App DNS → ALB
+ACM validation record
+🟢 12. RDS (DATABASE)
+Create DB Subnet Group (must use private_data subnets)
+Create Security Group for RDS
+Create RDS Instance
+🟢 13. S3 (APPLICATION STORAGE)
+Create S3 bucket
+Enable:
+versioning
+encryption
+public access block
+lifecycle rules
+🟢 14. IAM for Applications
+Create IAM role
+Create IAM policy
+Attach policy to role
+
+👉 Used by:
+
+pods
+apps
+services
+🔥 FINAL MENTAL FLOW (SUPER IMPORTANT)
+BOOTSTRAP
+→ IAM + KMS
+→ VPC
+→ Security Groups
+→ EKS Cluster
+→ Node Groups
+→ Karpenter
+→ ALB
+→ ACM
+→ Route53
+→ RDS
+→ S3
+→ App IAM Roles
+
 # 🚀 Complete VM Setup & Deployment Guide
 ## Banking Platform – From Zero to Production
 
@@ -43,6 +160,67 @@ Network:  Outbound internet access required
 ## Step 1 — System Update
 
 ```bash
+cd terraform/bootstrap/s3-backend
+terraform init
+terraform apply
+
+cd ../dynamodb-lock
+terraform init
+terraform apply
+
+Minor changes : First create AWS Secret manager and store db username and password
+
+aws route53 create-hosted-zone \
+  --name yourdomain.com \
+  --caller-reference $(date +%s)
+
+  Example output (important part):
+"DelegationSet": {
+  "NameServers": [
+    "ns-123.awsdns-45.com",
+    "ns-456.awsdns-78.net",
+    "ns-789.awsdns-12.org",
+    "ns-101.awsdns-34.co.uk"
+  ]
+}
+
+✋ Step 2: Go to GoDaddy
+Open domain settings
+Replace nameservers with above 4 NS
+Save
+⏳ Step 3: Wait for propagation
+5–30 mins (sometimes more)
+
+and also create aws secret manager with naem banking-prod-db-secret and store DB_PASSWORD and DB_USERNAME
+and also add github_password and use this banking-repo-creds
+and also create one more s3 bucket for velero disaster recovery as rohan-banking-backups-prod-us-east-1 in us-east region
+and after successfuly running all to get grafana access use this :
+kubectl get svc -n ingress-nginx 
+you will get the external ip and in the godaddy create a dns record A record and name as grafana and value add the ip address
+
+create another s3 bucket for tempo to store data:
+                  bucket: banking-prod-loki-logs-prod   
+
+create this in secret manager:
+      - name: GITHUB_CLIENT_ID
+      valueFrom:
+        secretKeyRef:
+          name: github-oauth-secret
+          key: GITHUB_CLIENT_ID
+    - name: GITHUB_CLIENT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: github-oauth-secret
+          key: GITHUB_CLIENT_SECRET
+    - secretKey: SONAR_QUBE_TOKEN
+      remoteRef:
+        key: jenkins/sonar-token # Secret name in AWS Secrets Manager
+        property: token
+
+kubectl get svc jenkins -n jenkins
+  look for the external IP address and access it 
+you will get the external ip and in the godaddy create a dns record A record and name as grafana and value add the ip address
+
 sudo apt update && sudo apt upgrade -y
 ```
 

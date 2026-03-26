@@ -1,0 +1,31 @@
+apiVersion: v1                    # Core Kubernetes API version for ConfigMaps
+kind: ConfigMap                   # Defines a ConfigMap object
+metadata:
+  name: tempo-datasource           # Name of the ConfigMap
+  namespace: monitoring            # Namespace where Grafana (and Tempo) live
+  labels:
+    grafana_datasource: "1"       # Custom label to identify this ConfigMap as a Grafana datasource configuration
+data:
+  tempo-ds.yaml: |-               # The actual Grafana datasource definition in YAML
+    apiVersion: 1                 # Grafana datasource API version
+    datasources:
+    - name: Tempo                 # Friendly name shown in Grafana
+      type: tempo                 # Type of datasource (Tempo)
+      uid: tempo-prod-01          # Unique identifier for Grafana
+      url: http://tempo-stack.monitoring.svc.cluster.local:3200 # Tempo service endpoint
+      access: proxy               # Grafana proxies requests to Tempo internally
+      isDefault: false            # Not the default datasource
+      jsonData:
+        lokiSearch:               # 1. Trace → Logs correlation
+          datasourceUid: 'loki'  # Links Tempo traces to Loki logs
+        serviceMap:               # 2. Trace → Metrics correlation
+          datasourceUid: 'prometheus' # Links services in traces to Prometheus metrics
+        nodeGraph:                # 3. Advanced visualization
+          enabled: true           # Enable live microservice dependency graph
+        tracesToLogsV2:           # 4. Span bar customization for traces
+          datasourceUid: 'loki'   # Loki is used for logs related to traces
+          spanStartTimeShift: '-1m' # Look 1 minute before the span for context
+          spanEndTimeShift: '1m'     # Look 1 minute after the span for context
+          tags: ['job', 'instance', 'pod', 'namespace'] # Show these tags on spans
+          filterByTraceId: true     # Filter logs by trace ID
+          filterBySpanId: false     # Do not filter logs by span ID

@@ -1,0 +1,57 @@
+# This file is updated to use IRSA for AWS EBS snapshots and 
+# secure internal communication for MinIO backups.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: velero
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://vmware-tanzu.github.io/helm-charts
+    chart: velero
+    targetRevision: 7.x.x
+    helm:
+      values: |
+        configuration:
+          backupStorageLocation:
+            - name: default
+              provider: aws
+              bucket: velero-backups
+              config:
+                region: minio
+                s3ForcePathStyle: true
+                # Using the standard internal service DNS
+                s3Url: http://minio.velero.svc.cluster.local:9000
+          volumeSnapshotLocation:
+            - name: default
+              provider: aws
+              config:
+                region: us-east-1
+        
+        # FIX: Enabling ServiceAccount annotations for IRSA
+        serviceAccount:
+          server:
+            create: true
+            name: velero-server
+            annotations:
+              eks.amazonaws.com/role-arn: arn:aws:iam::<ACCOUNT_ID>:role/bankapp-prod-velero-irsa
+
+        # FIX: Remove secretContents for security. 
+        # Velero will now use the IAM role for AWS APIs.
+        credentials:
+          useSecret: false 
+
+        initContainers:
+          - name: velero-plugin-for-aws
+            image: velero/velero-plugin-for-aws:v1.9.0
+            volumeMounts:
+              - mountPath: /target
+                name: plugins
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: velero
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

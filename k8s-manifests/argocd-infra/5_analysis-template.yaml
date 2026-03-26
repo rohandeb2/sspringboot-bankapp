@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1 # Argo Rollouts API
+kind: AnalysisTemplate # Defines automated analysis logic used during deployments
+metadata:
+  name: banking-success-rate-check # Name referenced in Rollout prePromotionAnalysis
+  namespace: argocd # Namespace where template is stored
+spec:
+  metrics: # metrics to evaluate during analysis
+  - name: success-rate # Logical name of the metric being evaluated
+    interval: 1m # Run this check every 1 minute
+    count: 5 # Run total 5 times (i.e., for 5 minutes)
+
+    successCondition: len(result) > 0 && result[0] >= 0.995 # Pass only if success rate ≥ 99.5%
+
+    failureLimit: 2 # If this check fails 2 times → rollout fails and rollback happens
+
+    provider: # Defines how to fetch the metric data
+      prometheus:
+        address: http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090 # Prometheus endpoint
+
+        query: | # PromQL query to calculate success rate
+          sum(rate(http_requests_total{status!~"5.*", app="{{ `{{args.app-name}}` }}"}[2m]))
+          /
+          sum(rate(http_requests_total{app="{{ `{{args.app-name}}` }}"}[2m]))

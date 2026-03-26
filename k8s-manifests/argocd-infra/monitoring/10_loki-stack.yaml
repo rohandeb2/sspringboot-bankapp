@@ -1,0 +1,60 @@
+# This file creates an ArgoCD Application to deploy the Loki stack and use all these configurations to set up Loki 
+# Loki is used for centralized log aggregation. It collects logs from all applications and stores them in a queryable backend (S3 in production), 
+# so that Grafana and Kiali can visualize logs and correlate them with traces and metrics.
+
+apiVersion: argoproj.io/v1alpha1        # ArgoCD Custom Resource Definition version for Application
+kind: Application                       # Defines an ArgoCD Application resource
+metadata:
+  name: loki-stack                       # Name of this ArgoCD application
+  namespace: argocd                       # Namespace where ArgoCD manages this app
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io  # Ensures resources are cleaned up properly when app is deleted
+spec:
+  project: default                        # ArgoCD project this app belongs to
+  source:
+    repoURL: https://grafana.github.io/helm-charts  # Helm chart repository URL for Loki
+    targetRevision: 2.10.2                # Helm chart version to deploy
+    chart: loki-stack                      # Name of the Helm chart
+    helm:
+      values: |                            # Inline Helm values to configure Loki and Promtail
+        loki:
+          serviceAccount:
+            create: false                  # Do not create a new ServiceAccount; use existing one
+            name: loki-sa                  # ServiceAccount for Loki with IRSA/permissions
+
+          config:                          # Loki configuration in YAML format
+            schema_config:                 
+              configs:                     # Defines how Loki stores and manages log data
+                - from: 2024-01-01         # from this date, use the following schema configuration
+                  store: boltdb-shipper    # it allow loki to store logs in S3 while keeping indexes locally for fast querying
+                  object_store: s3         # Use S3 as the long-term storage backend
+                  schema: v11              # Schema version
+                  index:
+                    prefix: index_         # Prefix for index files
+                    period: 24h            # Roll index every 24 hours
+
+            storage_config:
+              aws:
+                s3: s3://us-east-1/bankapp-prod-loki-logs-prod  # S3 bucket for storing logs (Terraform-managed)
+                bucketnames: bankapp-prod-loki-logs-prod  # S3 bucket name (Terraform-managed)
+                region: us-east-1                        # AWS region for the S3 bucket
+                s3forcepathstyle: true    # Force path-style access for S3 (required in some setups)
+              boltdb_shipper:
+                active_index_directory: /data/loki/index   # Local index directory
+                cache_location: /data/loki/cache          # Local cache directory
+
+        promtail:               # Promtail configuration to collect logs from Kubernetes nodes/pods
+          enabled: true                       # Deploy Promtail to collect logs from nodes/pods
+          config:
+            lokiAddress: http://{{ .Release.Name }}:3100/loki/api/v1/push  # Where Promtail sends logs
+
+  destination:
+    server: https://kubernetes.default.svc   # Deploy to this Kubernetes cluster
+    namespace: monitoring                    # Deploy into monitoring namespace
+
+  syncPolicy:
+    automated:
+      prune: true                             # Automatically delete resources removed from Git
+      selfHeal: true                          # Automatically revert out-of-band changes
+    syncOptions:
+      - CreateNamespace=true                  # Create the namespace if it does not exist

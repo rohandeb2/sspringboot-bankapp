@@ -1,0 +1,66 @@
+#This file deploys Kiali in a production-ready Istio environment with CPU/memory limits, integrates it with your 
+# monitoring stack (Prometheus, Grafana, Tempo), and ensures it’s managed declaratively via ArgoCD.
+
+# kiali help understand and visualize the service mesh, including traffic flows, dependencies, and performance metrics.
+# Kiali is the “control tower” for Istio. It tells you who is talking to whom, how healthy they are, and how traffic is flowing in your Kubernetes service mesh. 
+# It’s essential for monitoring, troubleshooting, and optimizing your microservices communication in production.
+
+apiVersion: argoproj.io/v1alpha1        # ArgoCD CRD version for Application
+kind: Application                       # Defines an ArgoCD Application resource
+metadata:
+  name: kiali-server                     # Name of this ArgoCD application
+  namespace: istio-system                # Namespace where ArgoCD manages this app (Istio system namespace)
+spec:
+  project: default                       # ArgoCD project this app belongs to
+  source:
+    repoURL: https://kiali.github.io/helm-charts # Helm repo containing Kiali charts
+    chart: kiali-server                  # Helm chart to deploy
+    targetRevision: 1.89.x               # Helm chart version; matches Istio 1.22 compatibility
+    helm:
+      values: |                          # Inline Helm values overriding chart defaults
+        auth:
+          strategy: anonymous            # Authentication strategy; 'anonymous' for labs, 'openid' or 'ldap' for prod
+        deployment:
+          sidecar_container_config:
+            resources:                    # CPU/memory resources for Kiali dashboard container
+              requests:
+                cpu: 100m                # Minimum CPU requested
+                memory: 256Mi            # Minimum memory requested
+              limits:
+                cpu: 500m                # Maximum CPU allowed
+                memory: 512Mi            # Maximum memory allowed
+        external_services:                # Kiali integrations with monitoring stack
+          prometheus:
+            url: "http://prometheus-stack-kube-prom-prometheus.monitoring.svc.cluster.local:9090" # Prometheus URL
+          grafana:
+            enabled: true
+            url: "http://grafana.monitoring.svc.cluster.local"   # Grafana URL
+          tracing:
+            enabled: true
+            url: "http://tempo-stack.monitoring.svc.cluster.local:3100" # Tempo URL for traces
+        server:
+          observability:
+            tracing:
+              enabled: true              # Enable tracing visualization inside Kiali
+  destination:
+    server: https://kubernetes.default.svc  # Deploy to this Kubernetes cluster
+    namespace: istio-system                 # Deploy into the Istio system namespace
+  syncPolicy:
+    automated:
+      prune: true                           # Automatically delete resources removed from Git/Helm
+      selfHeal: true                        # Automatically revert drifted resources to desired state
+
+
+
+# 1. Prometheus
+# Collects raw metrics from services (CPU, memory, request counts, error rates).
+# Good for alerting and time-series monitoring, but it doesn’t show service-to-service relationships.
+# 2. Grafana
+# Visualizes metrics from Prometheus (and other sources).
+# Great for dashboards and reporting, but can’t automatically map microservice traffic or show request traces.
+# 3. Kiali
+# Designed specifically for Istio service mesh observability.
+# Shows service-to-service communication graphs (topology).
+# Integrates with tracing (Tempo/Jaeger) to visualize request paths.
+# Provides Istio configuration insight (like VirtualServices, DestinationRules, Gateways).
+# Helps you debug and optimize microservices traffic, something Prometheus + Grafana alone can’t do easily.

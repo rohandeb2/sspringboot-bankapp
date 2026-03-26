@@ -1,8 +1,10 @@
 # bootstrap/s3-backend/main.tf
-
+provider "aws" {
+  region = "us-east-1"
+}
 # 1. The S3 Bucket for Terraform State
 resource "aws_s3_bucket" "state_bucket" {
-  bucket        = "${var.project_name}-terraform-state-${var.aws_account_id}"
+  bucket        = "bankapp-terraform-state-874516984521" # Must be globally unique
   force_destroy = false # Mandatory: prevent accidental deletion of state
 
   # Object Lock is a senior-level compliance feature
@@ -16,7 +18,7 @@ resource "aws_s3_bucket" "state_bucket" {
 
 # 2. Versioning - Critical for state recovery
 resource "aws_s3_bucket_versioning" "state_versioning" {
-  bucket = aws_s3_bucket.state_bucket.id
+  bucket        = "bankapp-terraform-state-874516984521"  
   versioning_configuration {
     status = "Enabled"
   }
@@ -24,18 +26,19 @@ resource "aws_s3_bucket_versioning" "state_versioning" {
 
 # 3. Server-Side Encryption (AES256 or KMS)
 resource "aws_s3_bucket_server_side_encryption_configuration" "state_encryption" {
-  bucket = aws_s3_bucket.state_bucket.id
+  bucket        = "bankapp-terraform-state-874516984521" 
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = var.kms_key_arn
     }
   }
 }
 
 # 4. Block Public Access - Non-negotiable for Banking security
 resource "aws_s3_bucket_public_access_block" "state_privacy" {
-  bucket = aws_s3_bucket.state_bucket.id
+  bucket = "bankapp-terraform-state-874516984521"
 
   block_public_acls       = true
   block_public_policy     = true
@@ -45,7 +48,7 @@ resource "aws_s3_bucket_public_access_block" "state_privacy" {
 
 # 5. Object Lock Configuration (Legal Hold/Compliance)
 resource "aws_s3_bucket_object_lock_configuration" "state_lock" {
-  bucket = aws_s3_bucket.state_bucket.id
+  bucket = "bankapp-terraform-state-874516984521"
 
   rule {
     default_retention {

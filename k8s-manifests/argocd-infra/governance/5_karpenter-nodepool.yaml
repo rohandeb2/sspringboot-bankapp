@@ -1,0 +1,24 @@
+# This tells Karpenter what kind of nodes to create and when to replace or delete them.
+
+apiVersion: karpenter.sh/v1 # API version for Karpenter NodePool resource used to define how nodes should be provisioned
+kind: NodePool  # Defines a pool of nodes with constraints and rules for Karpenter to create nodes
+metadata:
+  name: default  # Name of this NodePool (used to group and manage node provisioning rules)
+spec:
+  template:
+    spec:
+      requirements:
+        - key: "karpenter.sh/capacity-type"  # Defines whether nodes can be spot or on-demand instances
+          operator: In  # Allows only specified values
+          values: ["spot", "on-demand"]  # Karpenter can choose either spot (cheap) or on-demand (stable) instances
+        - key: "instance-category"  # Restricts EC2 instance families (e.g., t, m, c)
+          operator: In
+          values: ["t", "m", "c"]  # Allows multiple instance types for flexibility and cost optimization
+        - key: "kubernetes.io/arch"  # CPU architecture constraint for nodes
+          operator: In
+          values: ["amd64"]  # Only allows x86_64 (AMD64) architecture nodes
+      nodeClassRef:
+        name: default  # Refers to the EC2NodeClass that defines AMI, IAM role, subnets, and security groups
+  disruption:
+    consolidationPolicy: WhenUnderutilized  # Karpenter consolidates and removes underutilized nodes to save cost
+    expireAfter: 720h  # Nodes are replaced after 30 days to keep infrastructure fresh and updated

@@ -1,0 +1,75 @@
+# This NetworkPolicy implements the "Principle of Least Privilege" for Jenkins Agents.
+# It ensures agents can only talk to the Master and necessary external services (GitHub/AWS),
+# preventing them from lateral movement into your production banking databases.
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: jenkins-agent-isolation
+  namespace: jenkins
+spec:
+  # This policy applies to all Pods with the label 'jenkins: agent'
+  podSelector:
+    matchLabels:
+      jenkins: agent 
+  policyTypes:
+    - Ingress
+    - Egress
+
+  # 1. INGRESS: Who can talk TO the agent?
+  # Usually, only the Jenkins Controller (Master) needs to talk to the agent via JNLP.
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: jenkins-controller
+      ports:
+        - protocol: TCP
+          port: 50000 # Default JNLP port for agent-master communication
+
+  # 2. EGRESS: Where can the agent talk TO?
+  egress:
+    # RULE A: Allow DNS Resolution (Essential for finding GitHub/AWS)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    # RULE B: Allow Communication back to Jenkins Master
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: jenkins-controller
+      ports:
+        - protocol: TCP
+          port: 8080
+
+    # RULE C: Allow Access to Internet (GitHub, Maven Central, ECR, S3)
+    # In a strict banking environment, you would use CIDR blocks for specific AWS endpoints.
+    # This allows HTTPS (443) and SSH (22) for Git operations.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8      # Block all internal Private IPs (Class A)
+              - 172.16.0.0/12   # Block all internal Private IPs (Class B)
+              - 192.168.0.0/16  # Block all internal Private IPs (Class C)
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 22
+
+    # RULE D: Optional - Allow access to your SonarQube (if in different namespace)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: devsecops
+      ports:
+        - protocol: TCP
+          port: 9000

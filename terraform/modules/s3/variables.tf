@@ -28,3 +28,8 @@ variable "bucket_purpose" {
     error_message = "Bucket purpose cannot be empty"
   }
 }
+
+variable "kms_key_arn" {
+  description = "KMS key ARN for S3 encryption"
+  type        = string
+}

@@ -1,62 +1,66 @@
 # modules/cloudwatch/main.tf
 
-# 1. Log Group for Spring Boot Application
+# Log group : We create a log group in CloudWatch to organize and store logs from an application 
+# in one place so we can monitor, search, and analyze logs easily, control retention (cost), 
+# and apply security (encryption, access control)
 resource "aws_cloudwatch_log_group" "app_logs" {
-  name              = "/aws/eks/${var.project_name}/application"
-  retention_in_days = var.log_retention_days # Best Practice: Don't keep logs forever (cost)
-  kms_key_id        = var.kms_key_arn        # Encrypt logs for banking compliance
+  name              = "/aws/eks/${var.project_name}/application" # log group path
+  retention_in_days = var.log_retention_days # log retention to control cost
+  kms_key_id        = var.kms_key_arn        # encrypt logs for security/compliance
 
-  tags = merge(var.common_tags, { Name = "${var.project_name}-app-logs" })
+  tags = merge(var.common_tags, { Name = "${var.project_name}-app-logs" }) # tagging
 }
 
-# 2. Metric Filter to Detect 5xx Errors in Java Logs
-# Scans logs for "Internal Server Error" or "Exception"
+# Metric filter to detect errors from application logs
+#It converts unstructured logs into measurable data so you can trigger alarms when errors increase.
 resource "aws_cloudwatch_log_metric_filter" "app_errors" {
-  name           = "SpringBootErrorCount"
-  pattern        = "?Exception ?Error ?500"
-  log_group_name = aws_cloudwatch_log_group.app_logs.name
+  name           = "SpringBootErrorCount" # filter name
+  pattern        = "?Exception ?Error ?500" # log patterns to match errors
+  #? = match if the word exists anywhere in the log line (not exact match)
+  log_group_name = aws_cloudwatch_log_group.app_logs.name # source log group
 
   metric_transformation {
-    name      = "ErrorCount"
-    namespace = "BankingApp/Metrics"
-    value     = "1"
+    name      = "ErrorCount" # metric name
+    namespace = "BankingApp/Metrics" # custom namespace
+    value     = "1" # increments metric per match
   }
 }
 
-# 3. CloudWatch Alarm for High Error Rate
+# It alerts you when your application error rate becomes too high
 resource "aws_cloudwatch_metric_alarm" "app_error_alarm" {
-  alarm_name          = "${var.project_name}-high-error-rate"
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  evaluation_periods  = "2"
-  metric_name         = aws_cloudwatch_log_metric_filter.app_errors.metric_transformation[0].name
-  namespace           = aws_cloudwatch_log_metric_filter.app_errors.metric_transformation[0].namespace
-  period              = "60"
-  statistic           = "Sum"
-  threshold           = "5"
-  alarm_description   = "This alarm fires if Spring Boot throws more than 5 errors in 2 minutes"
-  alarm_actions       = [var.sns_topic_arn]
+  alarm_name          = "${var.project_name}-high-error-rate" # alarm name
+  comparison_operator = "GreaterThanOrEqualToThreshold" # trigger condition
+  evaluation_periods  = "2" # Alarm checks the metric over 2 consecutive time periods before triggering
+  metric_name         = aws_cloudwatch_log_metric_filter.app_errors.metric_transformation[0].name #The name of the metric you created (e.g., ErrorCount) that the alarm is monitoring.
+  namespace           = aws_cloudwatch_log_metric_filter.app_errors.metric_transformation[0].namespace # A logical grouping of metrics (here: BankingApp/Metrics) to separate your app metrics from others
+  period              = "60" # evaluation window (seconds)
+  statistic           = "Sum" # It calculates the total count of errors in each period (adds up all matching events).
+  threshold           = "5" # threshold for alarm
+  alarm_description   = "This alarm fires if Spring Boot throws more than 5 errors in 2 minutes" # description
+  alarm_actions       = [var.sns_topic_arn] # notification target (SNS)
 
-  tags = var.common_tags
+  tags = var.common_tags # tagging
 }
 
-# 4. Dashboard for High-Level Monitoring
+# CloudWatch dashboard for visual monitoring of key metrics
 resource "aws_cloudwatch_dashboard" "main" {
-  dashboard_name = "${var.project_name}-overview"
+  dashboard_name = "${var.project_name}-overview" # dashboard name
 
   dashboard_body = jsonencode({
     widgets = [
       {
-        type   = "metric"
-        width  = 12
-        height = 6
+        type   = "metric" # widget type
+        width  = 12 # widget width
+        height = 6 # widget height
         properties = {
           metrics = [
-            [aws_cloudwatch_log_metric_filter.app_errors.metric_transformation[0].namespace, aws_cloudwatch_log_metric_filter.app_errors.metric_transformation[0].name]
+            [aws_cloudwatch_log_metric_filter.app_errors.metric_transformation[0].namespace, aws_cloudwatch_log_metric_filter.app_errors.metric_transformation[0].name] # error metric
+            #Show the ErrorCount metric from the BankingApp/Metrics namespace on the dashboard
           ]
-          period = 300
-          stat   = "Sum"
-          region = var.aws_region
-          title  = "Application Errors"
+          period = 300 # 5-minute aggregation
+          stat   = "Sum" # sum of errors
+          region = var.aws_region # region
+          title  = "Application Errors" # chart title
         }
       }
     ]

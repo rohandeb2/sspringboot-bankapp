@@ -1,0 +1,113 @@
+apiVersion: argoproj.io/v1alpha1 # Argo Rollouts CRD API version
+kind: Rollout # Defines a progressive delivery rollout resource (instead of Deployment)
+metadata:
+  name: {{ include "banking.fullname" . }} # Dynamically generates rollout name using Helm helper
+  namespace: {{ .Values.namespace }} # Deploys rollout into the specified namespace
+  labels:
+    {{- include "banking.labels" . | nindent 4 }} # Applies common labels using Helm helper
+spec:
+  replicas: {{ .Values.replicaCount | default 1 }} # Ensures high availability with default 2 replicas
+  selector:
+    matchLabels:
+      app: {{ include "banking.fullname" . }} # Matches pods with this label for rollout control
+  
+  strategy:
+    blueGreen: # Uses Blue-Green deployment strategy for zero-downtime releases
+      activeService: {{ include "banking.fullname" . }}-active # All real users hit this service
+      previewService: {{ include "banking.fullname" . }}-preview # Users do NOT hit this (unless you expose it)
+      autoPromotionEnabled: false # Deployment will pause after new version is ready, waiting for manual promotion
+      prePromotionAnalysis: #Before switching traffic: Runs analysis checks
+      #Before promoting, go find an AnalysisTemplate named banking-success-rate-check and run it
+        templates:
+          - templateName: banking-success-rate-check # Runs analysis (e.g., metrics/alerts) before promotion
+                          # identify the analysis template by templateName and run it before promotion. If the analysis fails, the rollout will pause and not promote to stable.
+      scaleDownDelaySeconds: 60 # After promotion: Old version is NOT killed immediately 👉 Waits 60 seconds
+
+  template: # Pod template defining the application workload
+    metadata:
+      labels:
+        app: {{ include "banking.fullname" . }} # Labels applied to pods for selector matching
+    spec:
+      serviceAccountName: {{ include "banking.fullname" . }} # Associates pod with IAM-enabled ServiceAccount (IRSA)
+      securityContext:
+        runAsNonRoot: true # Enforces container to run as non-root user for security
+        runAsUser: 1000 # Specifies user ID inside container
+        fsGroup: 2000 # Ensures shared file system permissions across containers
+      containers:
+        - name: banking-api # Container name
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}" # Uses dynamic image repo and tag
+          imagePullPolicy: {{ .Values.image.pullPolicy }} # Controls when image is pulled
+          ports:
+            - name: http # Named port for service reference
+              containerPort: {{ .Values.service.targetPort | default 8080 }} # Container listens on this port
+              protocol: TCP # Uses TCP protocol
+          
+          env:
+              #This identifies the  service in dashboards
+            - name: OTEL_SERVICE_NAME # Identifies service in observability backend
+              value: "banking-core-service" # Logical service name for tracing/monitoring
+            
+              #Send all telemetry to the OpenTelemetry Collector
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT # Endpoint of OpenTelemetry collector
+              value: "http://otel-collector.monitoring.svc.cluster.local:4317" # gRPC endpoint inside cluster
+            
+              #Adds metadata to every trace/log so it can be easily filtered and analyzed in Grafana/Tempo
+            - name: OTEL_RESOURCE_ATTRIBUTES # Adds metadata tags to telemetry data
+              value: "service.namespace=banking,env=prod,pod.name=$(K8S_POD_NAME)" # Enriches traces/logs with context
+            
+              #Disables metrics export from OTEL because Prometheus is scraping metrics directly from the app
+            - name: OTEL_METRICS_EXPORTER # Controls metrics exporter
+              value: "none" # Disabled since Prometheus handles metrics
+            
+              #Enables distributed tracing
+            - name: OTEL_TRACES_EXPORTER # Controls trace exporter
+              value: "otlp" # Sends traces to OpenTelemetry collector
+            
+              #Sends logs via OpenTelemetry✔ Why? Centralized logging Correlate logs with traces
+            - name: OTEL_LOGS_EXPORTER # Controls logs exporter
+              value: "otlp" # Sends logs to OpenTelemetry collector
+
+            #uses k8s downward API to inject The current pod’s name into an environment variable In Kubernetes:  Pods are dynamic Names change on every deployment
+            - name: K8S_POD_NAME # Injects pod name dynamically
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name # Uses Kubernetes Downward API to fetch pod name
+
+            # attach a java agent for distributed tracing and metrics collection (OpenTelemetry Java agent)
+            - name: JAVA_TOOL_OPTIONS # JVM options for instrumentation
+              value: "-javaagent:/app/opentelemetry-javaagent.jar" # Attaches OpenTelemetry Java agent
+
+          envFrom:
+            - configMapRef:
+                name: {{ include "banking.fullname" . }}-config # Loads environment variables from ConfigMap
+            - secretRef:
+                name: {{ include "banking.fullname" . }}-db-secrets # Loads sensitive data from Kubernetes Secret
+
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }} # Applies CPU/memory resource requests and limits
+          
+          # Probes to monitor container health and ensure reliability
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness # Endpoint checked during container startup
+              port: http # Uses named port
+            failureThreshold: 30 # Allows long startup time before marking failure
+            periodSeconds: 10 # Probe interval during startup
+          
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness # Checks if app is alive
+              port: http # Uses named port
+            periodSeconds: 20 # Probe interval
+          
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness # Checks if app is ready to receive traffic
+              port: http # Uses named port
+            periodSeconds: 10 # Probe interval
+
+          # Graceful shutdown to prevent traffic loss during rollout promotion
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 20"] # Graceful shutdown delay to allow traffic drain

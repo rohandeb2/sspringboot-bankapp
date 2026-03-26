@@ -1,0 +1,81 @@
+# This file create an argocd application to deploy OpenTelemetry Collector in the monitoring namespace.
+# The OpenTelemetry Collector (OTel Collector) is essentially the central hub for collecting, processing, and exporting telemetry data (metrics, traces, logs) from your applications.
+
+apiVersion: argoproj.io/v1alpha1       # ArgoCD CRD version for Application
+kind: Application                      # Defines an ArgoCD Application resource
+metadata:
+  name: otel-collector                  # Name of this ArgoCD application
+  namespace: argocd                     # Namespace where ArgoCD manages this app
+spec:
+  project: default                      # ArgoCD project this app belongs to
+  source:
+    repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts # Helm chart repo
+    chart: opentelemetry-collector      # Helm chart for OpenTelemetry Collector
+    targetRevision: 0.110.0             # Chart version
+    helm:
+      values: |                         # Inline Helm values
+        mode: deployment                # Deploy OTel Collector as a Deployment (vs DaemonSet)
+        config:
+          receivers:
+            otlp:                        # OTLP receiver (OpenTelemetry Protocol)
+              protocols:
+                grpc:
+                  endpoint: 0.0.0.0:4317  # Collector listens on gRPC for traces/logs
+                http:
+                  endpoint: 0.0.0.0:4318  # Collector listens on HTTP for traces/logs
+          
+          # we only export traces to Tempo and logs to Loki, because metrics are collected directly by Prometheus via ServiceMonitors
+          exporters:
+            otlp/tempo:                  # Export traces to Tempo
+              endpoint: tempo-stack.monitoring.svc.cluster.local:4317
+              tls:
+                insecure: true           # Do not validate TLS for simplicity (dev/test)
+            
+            loki:                        # Export logs to Loki
+              endpoint: http://loki-stack.monitoring.svc.cluster.local:3100/loki/api/v1/push
+
+          service:
+            pipelines:
+              traces:                    # Pipeline for trace data
+                receivers: [otlp]       # Receive traces via OTLP
+                exporters: [otlp/tempo] # Send traces to Tempo
+              logs:                      # Pipeline for log data
+                receivers: [otlp]       # Receive logs via OTLP
+                exporters: [loki]       # Send logs to Loki
+  destination:
+    server: https://kubernetes.default.svc  # Deploy to this Kubernetes cluster
+    namespace: monitoring                   # Deploy into monitoring namespace
+
+
+# 1. Prometheus
+# Role: Metrics collection
+# What it does: Collects numerical data from apps and Istio (CPU, memory, request counts, error rates, latency).
+# Used by: Grafana dashboards, Kiali for metrics visualization.
+# 2. Grafana
+# Role: Metrics visualization and dashboards
+# What it does: Turns raw Prometheus metrics (and other data sources) into dashboards for monitoring.
+# Used by: Humans (engineers, operators) to see health, trends, and alerts.
+# 3. Loki
+# Role: Log aggregation
+# What it does: Collects logs from apps and stores them in a queryable way.
+# Used by: Grafana (for log dashboards) and Kiali (for trace-to-logs correlation).
+# 4. Tempo
+# Role: Distributed tracing storage
+# What it does: Stores traces collected from OpenTelemetry or apps, showing the path of requests across services.
+# Used by: Kiali and Grafana for tracing and debugging complex transactions.
+# 5. OpenTelemetry Collector
+# Role: Central telemetry hub
+# What it does: Receives traces/logs/metrics from apps, optionally processes them, and sends them to the correct backend (Tempo for traces, Loki for logs, Prometheus for metrics).
+# Used by: All backends — apps only talk to OTel Collector, which handles routing.
+# 6. Kiali
+# Role: Service mesh observability dashboard
+# What it does: Visualizes service-to-service communication, integrates metrics (Prometheus), traces (Tempo), and logs (Loki), and shows Istio configuration.
+# Used by: Engineers to understand traffic flow, debug failures, and visualize the mesh.
+# How it all fits together
+# [ Your Apps ] --> (OTLP) --> [ OpenTelemetry Collector ] 
+#                         |--> [ Tempo ] (traces)
+#                         |--> [ Loki ] (logs)
+#                         |--> [ Prometheus ] (metrics)
+
+# Grafana <-- metrics/logs/traces for dashboards
+# Kiali  <-- metrics + traces + logs + Istio configs

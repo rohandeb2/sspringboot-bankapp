@@ -1,45 +1,133 @@
-# Global Identifiers
-environment: prod
-team: fintech
-
-# 1. Namespace & Naming
+# Global settings
 namespace: banking-prod
+environment: dev
+team: fintech
+ownerEmail: "your-email@example.com"
 
-# 2. Image Details
+# Replica settings
+replicaCount: 2
+
+# Image configuration
 image:
-  repository: rohandevops.co.in/banking-api
-  tag: "v1.0.1"
-  pullPolicy: Always
+  repository: your-dockerhub/banking-app
+  tag: latest
+  pullPolicy: IfNotPresent
 
-# 3. Scaling & HA (12 LPA Logic)
-replicaCount: 3
-hpa:
-  enabled: true
-  minReplicas: 3
-  maxReplicas: 10
-  targetCPU: 70
+# Service configuration
+service:
+  port: 80
+  targetPort: 8080
 
-# 4. Resources (Guaranteed QoS)
-resources:
-  requests:
-    cpu: 250m
-    memory: 512Mi
-  limits:
-    cpu: 500m
-    memory: 1Gi
+# ConfigMap values
+config:
+  springProfile: dev
+  logLevel: DEBUG
+  dbHost: "dev-db.example.com"
+  dbPort: "3306"
+  dbName: "banking_dev"
 
-# 5. Security (AWS Integration)
+# Secrets (External Secrets)
+secrets:
+  awsSecretName: "banking-dev-db-secret"
+
+# Service Account
 serviceAccount:
   create: true
-  annotations: 
-    eks.amazonaws.com/role-arn: arn:aws:iam::1234567890:role/banking-app-role
+  annotations: {}
+  # Example for IRSA (optional)
+  # eks.amazonaws.com/role-arn: arn:aws:iam::<account-id>:role/banking-irsa-role
 
-# 6. Database / External Secrets
-secrets:
-  awsSecretName: "prod/banking/db-creds" # Points to AWS Secrets Manager
+# Network Policy
+network:
+  databaseCidr: "10.0.0.0/16"
 
-# 7. Networking
+# HPA
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPU: 70
+  targetMemory: 80
+
+# Resources (VERY IMPORTANT even in dev)
+resources:
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+  limits:
+    cpu: "500m"
+    memory: "1Gi"
+
+# Service Monitor
+serviceMonitor:
+  enabled: true
+  path: "/actuator/prometheus"
+  interval: "30s"
+
+# Ingress (ALB → Istio)
 ingress:
   enabled: true
-  host: banking.rohandevops.co.in
-  certificateArn: ""
+  host: "api.dev.rohandevops.co.in"
+  certificateArn: "arn:aws:acm:region:account:certificate/dev-cert-id"
+
+# Istio / Gateway
+istio:
+  host: "api.dev.rohandevops.co.in"
+
+# Observability (optional future use)
+observability:
+  otelCollectorEndpoint: "http://otel-collector.monitoring.svc.cluster.local:4317"
+
+# # Global Identifiers
+# environment: prod
+# team: fintech
+
+# # 1. Namespace & Naming
+# namespace: banking-default
+
+# # 2. Image Details
+# image:
+#   repository: rohandevops.co.in/banking-api
+#   tag: "v1.0.1"
+#   pullPolicy: Always
+
+# # 3. Scaling & HA (12 LPA Logic)
+# replicaCount: 3
+# hpa:
+#   enabled: true
+#   minReplicas: 3
+#   maxReplicas: 10
+#   targetCPU: 70
+
+# # 4. Resources (Guaranteed QoS)
+# resources:
+#   requests:
+#     cpu: 250m
+#     memory: 512Mi
+#   limits:
+#     cpu: 500m
+#     memory: 1Gi
+
+# # 5. Security (AWS Integration)
+# serviceAccount:
+#   create: true
+#   annotations: 
+#     eks.amazonaws.com/role-arn: arn:aws:iam::1234567890:role/banking-app-role
+
+# config:
+#   springProfile: prod
+#   logLevel: INFO
+
+#   dbHost: banking-prod-db.abcdefg.us-east-1.rds.amazonaws.com  # RDS endpoint
+#   dbPort: "3306"  # optional (default already exists)
+#   dbName: bankingdb  # database name
+
+# # 6. Database / External Secrets
+# secrets:
+#   awsSecretName: "prod/banking/db-creds" # Points to AWS Secrets Manager
+
+# # 7. Networking
+# ingress:
+#   enabled: true
+#   host: banking.rohandevops.co.in
+#   certificateArn: ""
