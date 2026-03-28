@@ -20,7 +20,11 @@ controller:
         secretKeyRef:
           name: jenkins-app-secrets
           key: SONAR_QUBE_TOKEN
-
+    - name: GEMINI_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: jenkins-app-secrets
+          key: GEMINI_API_KEY
   resources:
     requests:
       cpu: "500m"
@@ -86,21 +90,24 @@ controller:
                     - key: "eks.amazonaws.com/role-arn"
                       value: "arn:aws:iam::123456789012:role/jenkins-agent-irsa-role"
                   containers:
-                    - name: "maven"
-                      image: "maven:3.8.6-jdk-11"
-                      command: "sleep"
-                      args: "99d"
                     - name: "jnlp"
                       image: "jenkins/inbound-agent:4.10-4"
-                    containers:
+
                     - name: "maven"
                       image: "maven:3.8.6-jdk-11"
                       command: "sleep"
                       args: "99d"
+
+                    - name: "tools"
+                      image: "alpine/git"
+                      command: "sleep"
+                      args: "99d"
+
                     - name: "trivy"
                       image: "aquasec/trivy:latest"
                       command: "sleep"
                       args: "99d"
+
                     - name: "aws-cli"
                       image: "amazon/aws-cli:latest"
                       command: "sleep"
@@ -134,6 +141,10 @@ controller:
                     scope: GLOBAL
                     id: "sonar-token"
                     secret: "${SONAR_QUBE_TOKEN}"
+                - string:
+                    scope: GLOBAL
+                    id: "GEMINI_API_KEY" # This ID is used in devSecOpsPipeline.groovy
+                    secret: "${GEMINI_API_KEY}"
 
       # 6. GLOBAL SYSTEM CONFIGURATION
       unclassified:

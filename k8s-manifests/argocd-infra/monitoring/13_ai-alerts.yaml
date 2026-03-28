@@ -1,15 +1,30 @@
-apiVersion: monitoring.coreos.com/v1
-kind: PrometheusRule
+#This alert checks logs and triggers if any abnormal/incorrect log structure is detected for 2 minutes.
+
+apiVersion: monitoring.coreos.com/v1   # API used by Prometheus Operator for alerting rules
+kind: PrometheusRule                   # Defines alerting/recording rules for Prometheus
+
 metadata:
-  name: log-anomaly-alerts
-  namespace: monitoring
+  name: log-anomaly-alerts             # Name of this alert rule resource
+  namespace: monitoring               # Namespace where Prometheus is running
+
 spec:
-  groups:
-  - name: ai-log-alerts
-    rules:
-    - alert: HighLogAnomalyScore
-      expr: |
-        sum by (app) (rate({namespace="banking-prod"} | logfmt | __error__!="" [5m])) > 0
-      for: 2m
-      annotations:
-        summary: "AI detected structural anomaly in banking logs"
+  groups:                             # Group related alert rules together
+  - name: ai-log-alerts               # Name of this rule group
+    rules:                            # List of alert rules inside this group
+
+    - alert: HighLogAnomalyScore      # Name of the alert (shown in Alertmanager)
+
+      expr: |                         # PromQL / LogQL expression (multi-line)
+        sum by (app) (               # Group result by application label
+          rate(                      # Calculate rate (events per second)
+            {namespace="banking-prod"}   # Select logs from this namespace
+            | logfmt                     # Parse logs in logfmt format (key=value)
+            | __error__!=""              # Filter logs where parsing error exists (anomaly)
+            [5m]                         # Look at last 5 minutes of logs
+          )
+        ) > 0                         # Trigger alert if any anomaly is found (> 0)
+
+      for: 2m                         # Condition must be true for 2 minutes before firing
+
+      annotations:                    # Extra info shown in alert notification
+        summary: "AI detected structural anomaly in banking logs"  # Short alert message

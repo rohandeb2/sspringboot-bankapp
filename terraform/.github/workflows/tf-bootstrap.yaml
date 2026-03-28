@@ -1,0 +1,45 @@
+name: "Terraform 01 - Infrastructure Bootstrap"
+
+on:
+  workflow_dispatch: # Allows manual trigger only - prevents accidental runs
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  bootstrap:
+    name: "Provision S3 & DynamoDB Backend"
+    runs-on: ubuntu-latest
+    env:
+      TF_S3: "./terraform/bootstrap/s3-backend"
+      TF_DDB: "./terraform/bootstrap/dynamodb-lock"
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      # Provision S3 Bucket First
+      - name: Terraform Init & Apply (S3)
+        working-directory: ${{ env.TF_S3 }}
+        run: |
+          terraform init
+          terraform apply -auto-approve
+
+      # Provision DynamoDB Lock Table Second
+      - name: Terraform Init & Apply (DynamoDB)
+        working-directory: ${{ env.TF_DDB }}
+        run: |
+          terraform init
+          terraform apply -auto-approve

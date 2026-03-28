@@ -1,8 +1,9 @@
-def call(Map config = [:]) {
+def call(Map config = [:]) {  # create a function that can take some key value pairs and if nothing is given, use empty strings as defaults
     pipeline {
         agent { label 'maven' }
         
-        options {
+        # it link the jenkins job with the github repository and keep only the last 10 builds to save space
+        options {  
             githubProjectProperty(projectUrlStr: "https://github.com/rohandeb2/${config.repoName}/")
             buildDiscarder(logRotator(numToKeepStr: '10'))   # Keep only the last 10 builds to save space
         }
@@ -23,20 +24,20 @@ def call(Map config = [:]) {
                 steps {
                     container('maven') {
                         println "🚀 Starting Build for ${config.appName}"
-                        sh "mvn clean package -DskipTests"
+                        sh "mvn clean package -DskipTests"   # -DskipTests is used to skip the tests during the build phase, we will run them in a separate stage for better visibility and control
                     }
                 }
             }
 
             stage('SAST - SonarQube') {
                 steps {
-                    container('maven') {
-                        script {
-                            withSonarQubeEnv('SonarQube-Server') {
+                    container('maven') { # run inside container
+                        script {   # Allows writing custom Groovy logic (like variables, conditions, etc.)
+                            withSonarQubeEnv('SonarQube-Server') {   #Use SonarQube server configuration stored in Jenkins
                                 sh "mvn sonar:sonar -Dsonar.projectKey=${config.appName}"
                             }
                             timeout(time: 5, unit: 'MINUTES') {
-                                def qg = waitForQualityGate()
+                                def qg = waitForQualityGate()  # wait for sonarqube to finish and get the quality gate result
                                 if (qg.status != 'OK') {
                                     error "Pipeline aborted due to quality gate failure: ${qg.status}"
                                 }
@@ -45,12 +46,12 @@ def call(Map config = [:]) {
                     }
                 }
             }
-
+            # It checks your project’s dependencies (libraries) for known security vulnerabilities using OWASP Dependency Check
             stage('SCA - OWASP Scan') {
                 steps {
                     // This uses the Jenkins Plugin directly, no container block needed
-                    dependencyCheck additionalArguments: "--scan ./ --format HTML", odcInstallation: 'DP-Check'
-                    dependencyCheckPublisher pattern: 'dependency-check-report.html'
+                    dependencyCheck additionalArguments: "--scan ./ --format HTML", odcInstallation: 'DP-Check'  #Scan this project and generate a vulnerability report
+                    dependencyCheckPublisher pattern: 'dependency-check-report.html'   # Show the generated report in Jenkins UI
                 }
             }
 
@@ -58,7 +59,7 @@ def call(Map config = [:]) {
                 steps {
                     container('tools') { // Uses the container with Docker & Trivy installed
                         script {
-                            def fullImageName = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_REPO}:${IMAGE_TAG}"
+                            def fullImageName = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_REPO}:${IMAGE_TAG}" # Construct the full ECR image name using environment variables
                             
                             sh "docker build -t ${fullImageName} ."
                             
@@ -86,16 +87,18 @@ def call(Map config = [:]) {
                 steps {
                     container('tools') {
                         script {
-                            withCredentials([string(credentialsId: 'github-token', variable: 'GIT_TOKEN')]) {
+                            withCredentials([string(credentialsId: 'github-token', variable: 'GIT_TOKEN')]) { #Fetch GitHub token securely from Jenkins
                                 sh """
                                     git clone https://${GIT_TOKEN}@github.com/rohandeb2/sspringboot-bankapp.git
                                     cd sspringboot-bankapp/k8s-manifests/banking-platform/
                                     sed -i 's/tag: .*/tag: "${IMAGE_TAG}"/' values.yaml
                                     
+                                    # when jenkins makes a commit it require author name and email so that it can show in git history
                                     git config user.email "jenkins@rohandevops.co.in"
                                     git config user.name "Jenkins CI"
+
                                     git add values.yaml
-                                    git commit -m "chore: bump ${config.appName} to ${IMAGE_TAG} [skip ci]"
+                                    git commit -m "chore: bump ${config.appName} to ${IMAGE_TAG} [skip ci]" #chore means non feature change and bump means increase/decrease version
                                     git push origin main
                                 """
                             }
@@ -111,7 +114,7 @@ def call(Map config = [:]) {
                     subject: "✅ SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
                     body: """<p>SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'</p>
                         <p>Check console output at: <a href='${env.BUILD_URL}'>${env.BUILD_URL}</a></p>""",
-                    to: "rohan-admin@example.com", // Replace with your email
+                    to: "ruhondeb28@gmail.com", // Replace with your email
                     from: "jenkins@rohandevops.co.in"
                 )
             }
@@ -133,7 +136,7 @@ def call(Map config = [:]) {
                 }
             }
             always {
-                cleanWs()
+                cleanWs() # Clean up workspace after every build to save space and avoid conflicts
             }
         }
     }

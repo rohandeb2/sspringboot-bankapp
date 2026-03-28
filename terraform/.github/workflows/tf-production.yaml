@@ -1,0 +1,80 @@
+name: "Terraform 02 - Production Deployment"
+
+on:
+  push:
+    branches: [main]
+    paths: 
+      - 'terraform/modules/**'
+      - 'terraform/prod/**'
+  pull_request:
+    branches: [main]
+    paths: 
+      - 'terraform/modules/**'
+      - 'terraform/prod/**'
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate-and-deploy:
+    name: "Core Infrastructure Engine"
+    runs-on: ubuntu-latest
+    env:
+      TF_PROD: "./terraform/prod"
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  # it will fetch the role ARN from GitHub Secrets (which you set up with the OIDC trust relationship in AWS)
+          aws-region: us-east-1
+
+      # =========================================================
+      # 🔹 DEEP SECURITY SCAN (Checkov)
+      # =========================================================
+      - name: Run Checkov (Recursive Scan of Prod & Modules)
+        uses: bridgecrewio/checkov-action@master
+        with:
+          # Scans everything under /terraform recursively
+          directory: ./terraform     # Root directory to start scanning (includes both prod and modules)
+          framework: terraform       # Specify that we are scanning Terraform code
+          quiet: true                # it will only output findings and suppress extra info to focus on security issues
+          soft_fail: true           # Fail the workflow if any issues are found (set to true to just warn without failing)
+
+      # =========================================================
+      # 🔹 LINTING (TFLint)
+      # =========================================================
+      - name: Setup & Run TFLint
+        uses: terraform-linters/setup-tflint@v4     # Sets up TFLint in the GitHub Actions environment
+
+      - name: Recursive Linting
+        run: |
+          tflint --init
+          tflint --recursive --f compact
+
+      # =========================================================
+      # 🔹 PRODUCTION DEPLOYMENT
+      # =========================================================
+      - name: Terraform Init (Prod)
+        working-directory: ${{ env.TF_PROD }}
+        run: terraform init
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ env.TF_PROD }}
+        run: terraform plan -no-color -input=false -var-file="terraform.tfvars"
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'  # Only apply on direct pushes to main (not on PRs)
+        working-directory: ${{ env.TF_PROD }}
+        run: terraform apply -auto-approve -input=false -var-file="terraform.tfvars"

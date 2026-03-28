@@ -1,22 +1,36 @@
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
+apiVersion: autoscaling.k8s.io/v1        # API version for Vertical Pod Autoscaler (VPA)
+kind: VerticalPodAutoscaler              # This resource is a VPA (adjusts CPU/Memory automatically)
+
 metadata:
-  name: banking-predictive-scaler
-  namespace: {{ .Values.namespace }}
+  name: banking-predictive-scaler        # Name of this VPA resource
+  namespace: {{ .Values.namespace }}     # Namespace (coming from Helm values file)
+
 spec:
   targetRef:
-    apiVersion: "argoproj.io/v1alpha1"
-    kind: Rollout
-    name: {{ include "banking.fullname" . }}
+    apiVersion: "argoproj.io/v1alpha1"   # API of the target resource (Argo Rollout in this case)
+    kind: Rollout                       # Target is a Rollout (not Deployment)
+    name: {{ include "banking.fullname" . }}  # Name of the rollout (from Helm template)
+
   updatePolicy:
-    updateMode: "Auto" # AI will adjust CPU/Memory requests automatically
+    updateMode: "off"                  # it will only provide recommendations but won't automatically update pods (prevents conflicts with HPA)
+
   resourcePolicy:
     containerPolicies:
-      - containerName: "banking-api"
+      - containerName: "banking-api"    # Apply rules only to this container
+
         minAllowed:
-          cpu: "250m"
-          memory: "256Mi"
+          cpu: "250m"                  # Minimum CPU allowed (0.25 core)
+          memory: "256Mi"              # Minimum memory allowed
+
         maxAllowed:
-          cpu: "1"
-          memory: "1Gi"
-        controlledResources: ["cpu", "memory"]
+          cpu: "1"                     # Maximum CPU allowed (1 core)
+          memory: "1Gi"                # Maximum memory allowed
+
+        controlledResources: ["memory"]  # VPA will control CPU and memory only
+
+# I used both HPA and VPA because they solve different problems. HPA handles scaling the number of pods based on traffic, 
+# while VPA helps determine the right CPU and memory for each pod. In my setup, HPA performs the actual scaling, and 
+# VPA runs in recommendation mode to optimize resource usage without causing conflicts.
+# When load increases, HPA adds more pods to handle requests
+# “Instead of manually deciding CPU and memory, VPA analyzes usage and suggests optimal values”
+# This combination ensures the system is both scalable and cost-efficient

@@ -8,12 +8,12 @@ on:
       - 'k8s-manifests/cicd/2_jenkins-values.yaml'
 permissions:
   contents: write  # Allow the workflow to push changes back to the repository
-jobs:
-  render:
+jobs:     # job means a unit of work that runs on a runner and a runner is a server that executes the job's steps
+  render:     # name of the job
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4 # Updated to v4 for latest security
+        uses: actions/checkout@v4 # This action checks out your repository code so that the workflow can access it (like the Helm values file)
 
       # 1. Install Helm (Using a generic installer instead of the Azure-branded one)
       - name: Install Helm
@@ -33,9 +33,9 @@ jobs:
       # 3. Commit and Push back to Git
       - name: Commit and Push
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "rohandeb2"
+          git config --global user.email "ruhondeb28@gmail.com"
           git add k8s-manifests/cicd/3_jenkins-all-manifests.yaml
           # [skip ci] is crucial to prevent an infinite loop!
-          git commit -m "chore: auto-render jenkins manifests [skip ci]" || exit 0
+          git commit -m "chore: auto-render jenkins manifests [skip ci]" || exit 0       
           git push

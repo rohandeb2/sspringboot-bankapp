@@ -10,7 +10,7 @@ node {
     pipelineScript.call(
         appName: 'springboot-bankapp',
         repoName: 'sspringboot-bankapp',
-        awsAccountId: '123456789012', 
+        awsAccountId: '889501007925', 
         awsRegion: 'us-east-1',
         emailRecipient: 'ruhondeb28@gmail.com'
     )
