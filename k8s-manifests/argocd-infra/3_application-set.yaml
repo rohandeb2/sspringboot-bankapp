@@ -1,43 +1,50 @@
-apiVersion: argoproj.io/v1alpha1 # Argo CD API version
-kind: ApplicationSet # Generates multiple Argo CD Applications dynamically
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
 metadata:
-  name: banking-app-set # Name of the ApplicationSet
-  namespace: argocd # Must be in Argo CD namespace
+  name: banking-stack-set
+  namespace: argocd
 spec:
-  #It generates one Argo CD Application per element in the list
-  generators: # Defines how apps are created dynamically 
-    - list: #  Generates apps based on a static list of cluster/namespace combinations
-        elements: #Each element = one app instance
-          - cluster: in-cluster # Target cluster name
-            url: https://kubernetes.default.svc # Kubernetes API server
-            namespace: banking-prod # Target namespace for deployment
-            valuesFile: values-prod.yaml # Environment-specific Helm values file
-            env: prod # Environment identifier used in naming
+  generators:
+    - list:
+        elements:
+          # 1. Main Application
+          - appName: banking-platform
+            path: k8s-manifests/banking-platform # Corrected Path
+            namespace: banking-prod
+            env: prod
+          
+          # 2. Istio Networking (Fixing your deployment issue)
+          - appName: istio-base
+            path: k8s-manifests/argocd-infra/networking
+            namespace: istio-system
+            env: infra-istio
 
-  # For each generated element, create an Application using this template.
+          # 3. SonarQube (Fixing your deployment issue)
+          - appName: sonarqube
+            path: k8s-manifests/devsecops # Path where sonarqube-stack.yaml lives
+            namespace: devsecops
+            env: security
+
   template:
     metadata:
-      name: '{{env}}-banking-platform' # Dynamically generates app name (e.g., prod-banking-platform)
+      name: '{{env}}-{{appName}}'
     spec:
-      project: default # Uses AppProject for governance and security rules and must match the name of the AppProject defined in app-project.yaml
-      
+      project: default
       source:
-        repoURL: 'https://github.com/rohandeb2/sspringboot-bankapp' # Git repo containing Helm chart
-        targetRevision: HEAD # Always deploy latest commit (not ideal for strict prod, but common)
-        path: banking-platform # Path inside repo where Helm chart exists
+        repoURL: 'https://github.com/rohandeb2/sspringboot-bankapp'
+        targetRevision: HEAD
+        path: '{{path}}' # Dynamic path based on the list above
+        # If it's a Helm chart, it uses these. If plain YAML, it ignores them.
         helm:
           valueFiles:
-            - values.yaml # Base configuration
-            - '{{valuesFile}}' # Environment-specific override (values-prod.yaml)
-      
+            - values.yaml
       destination:
-        server: '{{url}}' # Target cluster (dynamic)
-        namespace: '{{namespace}}' # Target namespace (dynamic)
-      
+        server: https://kubernetes.default.svc
+        namespace: '{{namespace}}'
       syncPolicy:
         automated:
-          prune: true # Removes resources not present in Git (prevents drift)
-          selfHeal: true # Automatically fixes drift if someone changes cluster manually
+          prune: true
+          selfHeal: true
         syncOptions:
-          - CreateNamespace=true # Automatically creates namespace if not exists
-          - Validate=true # Validates against AppProject rules before deployment
+          - CreateNamespace=true
+          - Validate=true

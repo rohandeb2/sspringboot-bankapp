@@ -48,7 +48,10 @@ spec:
   syncPolicy:
     automated:
       prune: true                           # Automatically delete resources removed from Git/Helm
-      selfHeal: true                        # Automatically revert drifted resources to desired state
+      selfHeal: true   
+    syncOptions:
+      - CreateNamespace=true # Automatically creates namespace if not exists
+      # - Validate=true # Validates against AppProject rules before deployment
 
 
 

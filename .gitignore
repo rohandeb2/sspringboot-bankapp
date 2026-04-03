@@ -97,4 +97,4 @@ aws-credentials
 *.tmp
 *.bak
 *.swp
-.DS_Store
+.DS_Storeargocd

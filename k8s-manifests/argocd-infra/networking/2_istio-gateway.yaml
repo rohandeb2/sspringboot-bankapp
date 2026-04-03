@@ -54,4 +54,6 @@ spec:
   syncPolicy:
     automated:
       prune: true  # Deletes resources removed from Git
-      selfHeal: true  # Fixes drift between cluster and Git automatically
+      selfHeal: true 
+    syncOptions:
+      - CreateNamespace=true # Automatically creates namespace if not exists
