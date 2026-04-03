@@ -1,7 +1,7 @@
 # We create this file to define the infrastructure blueprint (AMI, IAM role, subnet, security group, tags) 
 # that Karpenter uses to provision EC2 nodes automatically in AWS.
 
-apiVersion: karpenter.k8s.aws/v1 # API version for Karpenter AWS resources used to define EC2 node configuration
+apiVersion: karpenter.k8s.aws/v1beta1  #rsion for Karpenter AWS resources used to define EC2 node configuration
 kind: EC2NodeClass  # Defines how EC2 instances (nodes) should be configured and launched by Karpenter
 metadata:
   name: default  # Name of this EC2 node template used by NodePool

@@ -460,7 +460,7 @@ Istio 1.22 is deployed via ArgoCD (Helm) in three components: `istio-base` (CRDs
 
 **Zero Trust enforcement:**
 ```yaml
-apiVersion: security.istio.io/v1beta1
+apiVersion: security.istio.io/v1
 kind: PeerAuthentication
 spec:
   mtls:

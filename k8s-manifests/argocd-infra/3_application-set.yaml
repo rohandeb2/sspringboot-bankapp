@@ -19,7 +19,7 @@ spec:
     metadata:
       name: '{{env}}-banking-platform' # Dynamically generates app name (e.g., prod-banking-platform)
     spec:
-      project: banking-core-project # Uses AppProject for governance and security rules and must match the name of the AppProject defined in app-project.yaml
+      project: default # Uses AppProject for governance and security rules and must match the name of the AppProject defined in app-project.yaml
       
       source:
         repoURL: 'https://github.com/rohandeb2/sspringboot-bankapp' # Git repo containing Helm chart

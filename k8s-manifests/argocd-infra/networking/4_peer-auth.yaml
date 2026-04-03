@@ -2,7 +2,7 @@
 # mtls is a security mechanism that encrypts traffic between services and ensures that only authenticated services can communicate with each other.
 
 
-apiVersion: security.istio.io/v1beta1  # Istio security API version for authentication policies
+apiVersion: security.istio.io/v1  # Istio security API version for authentication policies
 kind: PeerAuthentication  # Resource used to enforce how services authenticate each other (mTLS)
 metadata:
   name: default  # Name of the policy (default applies broadly within the namespace)

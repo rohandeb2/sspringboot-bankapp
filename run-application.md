@@ -842,7 +842,7 @@ aws secretsmanager create-secret \
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
 cat <<EOF | kubectl apply -f -
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: ClusterSecretStore
 metadata:
   name: aws-secrets-manager

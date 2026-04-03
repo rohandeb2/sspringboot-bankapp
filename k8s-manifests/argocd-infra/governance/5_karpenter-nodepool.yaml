@@ -1,6 +1,6 @@
 # This tells Karpenter what kind of nodes to create and when to replace or delete them.
 
-apiVersion: karpenter.sh/v1 # API version for Karpenter NodePool resource used to define how nodes should be provisioned
+apiVersion: karpenter.sh/v1beta1  # API version for Karpenter NodePool resource used to define how nodes should be provisioned
 kind: NodePool  # Defines a pool of nodes with constraints and rules for Karpenter to create nodes
 metadata:
   name: default  # Name of this NodePool (used to group and manage node provisioning rules)
