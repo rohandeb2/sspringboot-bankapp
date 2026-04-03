@@ -18,76 +18,76 @@ spec:
     chart: kube-prometheus-stack  # tell ArgoCD which chart to deploy (Prometheus stack with Grafana and Alertmanager)  
 
     helm:
-      values: |  # Inline Helm values override
-      # this block of code will confifure the prometheus retention, resource limits, storage, and alerting rules.
+      values: |
         prometheus:
           prometheusSpec:
-            retention: 15d  # Keep metrics data for 15 days
+            retention: 15d
 
-            resources:  # this amount of resources are allocated to the prometheus server for storing and processing metrics data.
+            resources:
               requests:
-                memory: 2Gi  # Minimum memory guaranteed
+                memory: 2Gi
               limits:
-                memory: 4Gi  # Max memory usage allowed
+                memory: 4Gi
 
-            #This tells Prometheus Whenever you create a Prometheus pod, also create a Persistent Volume Claim (PVC) of 20Gi using gp3
             storageSpec:
               volumeClaimTemplate:
                 spec:
-                  storageClassName: gp3  # AWS EBS gp3 storage class
-                  accessModes: ["ReadWriteOnce"]  # Volume mounted by single node
+                  storageClassName: gp3
+                  accessModes:
+                    - ReadWriteOnce
                   resources:
                     requests:
-                      storage: 20Gi  # Persistent storage size for Prometheus
+                      storage: 20Gi
 
-        # create a persistent storage of 10gb for grafana to store dashboards and data wihtout this dashborad will be deleted when grafana pod restarts 
         grafana:
           persistence:
-            enabled: true  # Enable persistent storage for dashboards
-            size: 10Gi  # Disk size for Grafana data
+            enabled: true
+            size: 10Gi
 
-          ingress:       # it expose the grafana to the public url
-            enabled: true  # Expose Grafana externally
-            ingressClassName: nginx  # Use NGINX ingress controller
+          ingress:
+            enabled: true
+            ingressClassName: nginx
             hosts:
-              - grafana.rohandevops.co.in  # Public domain for Grafana UI
+              - grafana.rohandevops.co.in
 
-        # Alertmanager configuration to route alerts to Slack channels based on severity
         alertmanager:
           config:
             global:
-              resolve_timeout: 5m  # Time to wait before sending an alert, we use this because sometimes alerts can be flappy and we want to avoid sending too many notifications for the same issue.
-            route:                 # This is the root route for all alerts. It defines how alerts are grouped and where they are sent.
-              group_wait: 30s        # Time to wait before sending the first notification for a new alert group
-              group_interval: 5m     # Minimum time between notifications for the same alert group
-              repeat_interval: 4h    # Minimum time to wait before resending an alert if it is still firing
-              group_by: ['alertname', 'priority']  # Group alerts by their name and priority for better organization in notifications
-              receiver: slack-default  # Default Slack receiver
+              resolve_timeout: 5m
+
+            route:
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 4h
+              group_by:
+                - alertname
+                - priority
+              receiver: slack-default
 
               routes:
                 - match:
-                    severity: critical  # Match critical alerts
-                  receiver: slack-critical  # Send to critical Slack channel
+                    severity: critical
+                  receiver: slack-critical
 
                 - match:
-                    severity: warning  # Match warning alerts
-                  receiver: slack-warning  # Send to warning Slack channel
+                    severity: warning
+                  receiver: slack-warning
 
             receivers:
-              - name: slack-critical  # Receiver for critical alerts
+              - name: slack-critical
                 slack_configs:
-                  - api_url: "REPLACE_WITH_SECURE_SECRET"  # Slack webhook URL (should be stored securely)
-                    channel: "#alerts-critical"  # Slack channel for critical alerts
+                  - api_url: "REPLACE_WITH_SECURE_SECRET"
+                    channel: "#alerts-critical"
 
-              - name: slack-warning  # Receiver for warning alerts
+              - name: slack-warning
                 slack_configs:
-                  - api_url: "REPLACE_WITH_SECURE_SECRET"  # Slack webhook URL
-                    channel: "#alerts-warning"  # Slack channel for warnings
+                  - api_url: "REPLACE_WITH_SECURE_SECRET"
+                    channel: "#alerts-warning"
 
-              - name: slack-default  # Default fallback receiver
+              - name: slack-default
                 slack_configs:
-                  - api_url: "REPLACE_WITH_SECURE_SECRET"  # Slack webhook URL
-                    channel: "#alerts-banking"  # Default alerts channel
+                  - api_url: "REPLACE_WITH_SECURE_SECRET"
+                    channel: "#alerts-banking"
 
   destination:
     server: https://kubernetes.default.svc  # Target Kubernetes cluster (in-cluster)

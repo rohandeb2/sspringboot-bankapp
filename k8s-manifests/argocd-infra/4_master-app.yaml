@@ -14,7 +14,7 @@ spec:
   source:
     repoURL: 'https://github.com/rohandeb2/sspringboot-bankapp' # Git repo containing infra configs
     targetRevision: HEAD # Tracks latest commit (not ideal for strict prod, but common in setups)
-    path: argocd-infra # Folder containing all Argo CD infra YAMLs (AppProject, ApplicationSet, etc.)
+    path: k8s-manifests/argocd-infra  # Path to CD infra YAMLs (AppProject, ApplicationSet, etc.)
     directory:
       recurse: true # Reads all YAML files recursively inside this folder
 
