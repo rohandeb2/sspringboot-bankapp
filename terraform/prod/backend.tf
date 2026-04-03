@@ -9,7 +9,6 @@ terraform {
     
     # Replace with the actual output from your Bootstrap DynamoDB module
     dynamodb_table = "bankapp-terraform-locks-8446176321459"
-    
     encrypt        = true # AES256 encryption at rest
   }
 

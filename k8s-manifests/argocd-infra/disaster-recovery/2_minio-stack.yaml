@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: https://charts.bitnami.com/bitnami  # Helm chart repository for MinIO
     chart: minio  # Name of the Helm chart to deploy
-    targetRevision: 14.x.x  # Specific version of the chart (pinning for stability)
+    targetRevision: 14.0.0  # Specific version of the MinIO chart to ensure stability
     helm:
       values: |  # Helm values to configure MinIO deployment
         auth:

@@ -221,6 +221,7 @@ kubectl get svc jenkins -n jenkins
   look for the external IP address and access it 
 you will get the external ip and in the godaddy create a dns record A record and name as grafana and value add the ip address
 
+
 sudo apt update && sudo apt upgrade -y
 ```
 
@@ -274,7 +275,7 @@ docker compose version
 ## Step 4 — Clone the Repository
 
 ```bash
-git clone https://github.com/rohan/Springboot-BankApp.git
+git clone https://github.com/rohandeb2/sspringboot-bankapp
 cd Springboot-BankApp
 ```
 
@@ -583,7 +584,7 @@ echo "=== All tools verified ==="
 ## Phase 2 — Clone the Repository
 
 ```bash
-git clone https://github.com/rohan/Springboot-BankApp.git
+git clone https://github.com/rohandeb2/sspringboot-bankapp
 cd Springboot-BankApp
 ls -la
 ```

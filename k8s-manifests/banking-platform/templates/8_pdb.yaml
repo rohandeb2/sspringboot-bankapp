@@ -10,3 +10,5 @@ spec:
   selector:
     matchLabels:
       app: {{ include "banking.fullname" . }} # Applies PDB to pods with this label
+
+

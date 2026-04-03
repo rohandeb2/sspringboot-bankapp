@@ -393,7 +393,7 @@ The platform uses the **App-of-Apps pattern** — one root application (`root-ba
 
 ```yaml
 # Source restriction — only trusted GitHub repo
-sourceRepos: ['https://github.com/rohan/Springboot-BankApp.git']
+sourceRepos: ['https://github.com/rohandeb2/sspringboot-bankapp']
 
 # Destination restriction — only banking-prod namespace
 destinations:

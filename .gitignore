@@ -1,10 +1,17 @@
+#################################
+# 🚀 SPRING BOOT / JAVA
+#################################
 HELP.md
 target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-### STS ###
+#################################
+# 🧠 IDE FILES
+#################################
+
+# STS
 .apt_generated
 .classpath
 .factorypath
@@ -13,13 +20,16 @@ target/
 .springBeans
 .sts4-cache
 
-### IntelliJ IDEA ###
-.idea
+# IntelliJ
+.idea/
 *.iws
 *.iml
 *.ipr
 
-### NetBeans ###
+# VS Code
+.vscode/
+
+# NetBeans
 /nbproject/private/
 /nbbuild/
 /dist/
@@ -29,5 +39,62 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### VS Code ###
-.vscode/
+#################################
+# 🐳 DOCKER
+#################################
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+#################################
+# 🌍 ENV / SECRETS (VERY IMPORTANT)
+#################################
+.env
+.env.*
+*.tfvars
+*.tfvars.json
+secrets.json
+
+#################################
+# 🏗️ TERRAFORM
+#################################
+
+# Terraform working dir
+.terraform/
+
+# Terraform state files (CRITICAL ❌ never commit)
+*.tfstate
+*.tfstate.*
+
+# Crash logs
+crash.log
+
+# Terraform plan output
+*.tfplan
+
+# Ignore override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform lock file (optional: keep or ignore)
+# Recommended to KEEP in team projects
+# .terraform.lock.hcl
+
+#################################
+# ☁️ AWS / KUBE
+#################################
+kubeconfig
+*.kubeconfig
+aws-credentials
+.aws/
+
+#################################
+# 📦 BUILD / TEMP
+#################################
+*.tmp
+*.bak
+*.swp
+.DS_Store

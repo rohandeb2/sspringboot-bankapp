@@ -8,22 +8,22 @@ controller:
     - name: GITHUB_CLIENT_ID
       valueFrom:
         secretKeyRef:
-          name: github-oauth-secret
+          name: jenkins-secrets
           key: GITHUB_CLIENT_ID
     - name: GITHUB_CLIENT_SECRET
       valueFrom:
         secretKeyRef:
-          name: github-oauth-secret
+          name: jenkins-secrets
           key: GITHUB_CLIENT_SECRET
     - name: SONAR_QUBE_TOKEN
       valueFrom:
         secretKeyRef:
-          name: jenkins-app-secrets
+          name: jenkins-secrets
           key: SONAR_QUBE_TOKEN
     - name: GEMINI_API_KEY
       valueFrom:
         secretKeyRef:
-          name: jenkins-app-secrets
+          name: jenkins-secrets
           key: GEMINI_API_KEY
   resources:
     requests:
@@ -81,37 +81,42 @@ controller:
           - kubernetes:
               name: "kubernetes"
               namespace: "jenkins"
+              # Internal DNS for communication
               jenkinsUrl: "http://jenkins-controller.jenkins.svc.cluster.local:8080"
               templates:
-                - name: "maven-agent"
-                  label: "maven"
-                  serviceAccount: "jenkins-agent-sa"
-                  annotations:
-                    - key: "eks.amazonaws.com/role-arn"
-                      value: "arn:aws:iam::123456789012:role/jenkins-agent-irsa-role"
+                - name: "banking-agent"
+                  label: "banking-agent"
+                  serviceAccount: "jenkins-agent-sa" # IRSA Role for ECR access
                   containers:
                     - name: "jnlp"
-                      image: "jenkins/inbound-agent:4.10-4"
-
+                      image: "jenkins/inbound-agent:3148.v532a_2e130112-3"
                     - name: "maven"
                       image: "maven:3.8.6-jdk-11"
                       command: "sleep"
                       args: "99d"
-
-                    - name: "tools"
-                      image: "alpine/git"
-                      command: "sleep"
-                      args: "99d"
-
-                    - name: "trivy"
-                      image: "aquasec/trivy:latest"
-                      command: "sleep"
-                      args: "99d"
-
+                    - name: "docker-client"
+                      image: "docker:24.0.7"
+                      command: ["sleep"]
+                      args: ["99d"]
+                      securityContext:
+                        runAsUser: 0 # Required to access hostPath socket
+                      volumeMounts:
+                        - name: "docker-sock"
+                          mountPath: /var/run/docker.sock
                     - name: "aws-cli"
                       image: "amazon/aws-cli:latest"
                       command: "sleep"
                       args: "99d"
+                    - name: "trivy"
+                      image: "aquasec/trivy:latest"
+                      command: "sleep"
+                      args: "99d"
+                  
+                  # Mount the Docker Socket from the EKS Node to the Pod
+                  volumes:
+                    - hostPathVolume:
+                        hostPath: "/var/run/docker.sock"
+                        mountPath: "/var/run/docker.sock"
 
       # 4. TOOLS (Auto-install Scanners)
       tool:

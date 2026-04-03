@@ -22,7 +22,7 @@ spec:
             service.beta.kubernetes.io/aws-load-balancer-type: "external"            # Use external AWS load balancer
             service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"              # Targets EC2 instances
             service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"            # Public internet access
-          ports:    #on these ports, the gateway will listen for incoming traffic and also send health checks to monitor its status
+          ports:                           #on these ports, the gateway will listen for incoming traffic and also send health checks to monitor its status
             - name: status-port            # Port for health/status checks
               port: 15021                  # External port for status checks
               targetPort: 15021            # Internal container port for status checks

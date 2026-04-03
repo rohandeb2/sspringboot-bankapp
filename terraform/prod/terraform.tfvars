@@ -2,21 +2,12 @@
 
 # Project Metadata
 project_name = "bankapp-prod"
+
 environment  = "prod"
 
-# Networking - Designing for HA (High Availability)
-vpc_cidr             = "10.0.0.0/16"
-public_subnets       = ["10.0.1.0/24", "10.0.2.0/24"]
-private_app_subnets  = ["10.0.10.0/24", "10.0.11.0/24"] # For EKS Nodes
-private_data_subnets = ["10.0.20.0/24", "10.0.21.0/24"] # For RDS
+region = "us-east-1"
 
-# Database Configuration
-# Note: The password should ideally be passed via environment variable (TF_VAR_db_password)
-db_username       = "bankadmin"
-db_instance_class = "db.t3.medium" # Production scale
-
-# Domain & SSL
-domain_name = "joakim.online"
+kms_key_arn = "arn:aws:kms:us-east-1:959589242185:key/35540e64-8e39-426d-b47b-d0613ece2c1c"
 
 # Standard Tagging Policy
 common_tags = {
@@ -26,3 +17,40 @@ common_tags = {
   CostCenter         = "Finance-IT"
   SecurityCompliance = "PCI-DSS"
 }
+
+kubernetes_version = "1.31"
+
+vpc_cidr             = "10.0.0.0/16"
+
+public_subnets = [
+  "10.0.1.0/24",
+  "10.0.2.0/24"
+]
+
+private_app_subnets = [
+  "10.0.3.0/24",
+  "10.0.4.0/24"
+]
+
+
+
+private_data_subnets = [
+  "10.0.5.0/24",
+  "10.0.6.0/24"
+]
+
+
+db_instance_class = "db.t4g.micro"
+
+db_name = "bankappdb"
+
+log_retention_days = 7
+
+# Domain & SSL
+domain_name = "rohandevops.co.in"
+
+
+
+namespace = "banking-prod"
+
+service_account_name = "bankapp-banking-platform"

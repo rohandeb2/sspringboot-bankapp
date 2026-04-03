@@ -1,67 +1,87 @@
+# --- Project Metadata ---
 variable "project_name" {
-  description = "Project name used for resource naming"
+  description = "Name of the project"
   type        = string
-  default     = "bankapp-prod"
+}
+
+variable "environment" {
+  description = "Environment name (e.g. prod, dev)"
+  type        = string
+}
+
+variable "region" {
+  description = "AWS Region"
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "kms_key_arn" {
+  description = "ARN of the KMS key for encryption"
+  type        = string
+}
+
+# --- Standard Tagging Policy ---
+variable "common_tags" {
+  description = "A map of tags to add to all resources"
+  type        = map(string)
+}
+
+# --- Network & Kubernetes ---
+variable "kubernetes_version" {
+  description = "Version of EKS to deploy"
+  type        = string
 }
 
 variable "vpc_cidr" {
-  description = "CIDR block for VPC"
+  description = "CIDR block for the VPC"
   type        = string
-
-  validation {
-    condition     = can(cidrnetmask(var.vpc_cidr))
-    error_message = "Must be a valid IPv4 CIDR block."
-  }
 }
 
 variable "public_subnets" {
-  description = "List of public subnet CIDR blocks"
+  description = "List of CIDR blocks for public subnets"
   type        = list(string)
-
-  validation {
-    condition     = length(var.public_subnets) >= 2
-    error_message = "At least 2 public subnets required"
-  }
 }
 
 variable "private_app_subnets" {
-  description = "List of private app subnet CIDR blocks"
+  description = "List of CIDR blocks for private application subnets"
   type        = list(string)
-
-  validation {
-    condition     = length(var.private_app_subnets) >= 2
-    error_message = "At least 2 private app subnets required"
-  }
 }
 
 variable "private_data_subnets" {
-  description = "List of private data subnet CIDR blocks"
+  description = "List of CIDR blocks for private database subnets"
   type        = list(string)
-
-  validation {
-    condition     = length(var.private_data_subnets) >= 2
-    error_message = "At least 2 private data subnets required"
-  }
 }
 
-variable "db_password" {
-  description = "Database password"
+# --- Database (RDS) ---
+variable "db_instance_class" {
+  description = "The instance type of the RDS database"
   type        = string
-  sensitive   = true
-
-  validation {
-    condition     = length(var.db_password) >= 8
-    error_message = "Password must be at least 8 characters"
-  }
 }
 
-variable "common_tags" {
-  description = "Common tags applied to all resources"
-  type        = map(string)
+variable "db_name" {
+  description = "The name of the database to create"
+  type        = string
+}
 
-  default = {
-    Project   = "Banking-System"
-    ManagedBy = "Terraform"
-    Owner     = "DevOps-Team"
-  }
+# --- Logging & Monitoring ---
+variable "log_retention_days" {
+  description = "Number of days to retain CloudWatch logs"
+  type        = number
+}
+
+# --- Domain & SSL ---
+variable "domain_name" {
+  description = "The primary domain name for the application"
+  type        = string
+}
+
+# --- K8s Namespacing & IAM ---
+variable "namespace" {
+  description = "The Kubernetes namespace for the app"
+  type        = string
+}
+
+variable "service_account_name" {
+  description = "The IAM service account name for EKS"
+  type        = string
 }

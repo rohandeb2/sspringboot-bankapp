@@ -40,7 +40,7 @@ spec:
                 block_retention: 14d                 # Retain trace blocks for 14 days
                 compacted_block_retention: 1h        # Keep compacted blocks for 1 hour
           config: |                             # this block is for additional Tempo configuration in YAML format
-            distributor:                       # it’s the first component that receives all traces from applications.
+            distributor:                       # it's the first component that receives all traces from applications.
               receivers:                       # it define how Tempo receives trace data from applications
                 otlp:
                   protocols:

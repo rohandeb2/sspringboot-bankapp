@@ -15,13 +15,13 @@ spec:
   source:
     repoURL: https://kiali.github.io/helm-charts # Helm repo containing Kiali charts
     chart: kiali-server                  # Helm chart to deploy
-    targetRevision: 1.89.x               # Helm chart version; matches Istio 1.22 compatibility
+    targetRevision: 1.89.0              # Helm chart version; matches Istio 1.22 compatibility
     helm:
       values: |                          # Inline Helm values overriding chart defaults
         auth:
           strategy: anonymous            # Authentication strategy; 'anonymous' for labs, 'openid' or 'ldap' for prod
-        deployment:
-          sidecar_container_config:
+        deployment:                      # Deployment-specific configuration
+          sidecar_container_config:      
             resources:                    # CPU/memory resources for Kiali dashboard container
               requests:
                 cpu: 100m                # Minimum CPU requested

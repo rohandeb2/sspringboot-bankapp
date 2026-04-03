@@ -11,8 +11,8 @@ spec:
     apiVersion: argoproj.io/v1alpha1 # Target resource API version
     kind: Rollout # Resource type to scale (Rollout in this case)
     name: {{ include "banking.fullname" . }} # Name of the Rollout to scale
-  minReplicas: {{ .Values.hpa.minReplicas | default 3 }} # Minimum number of pods always running
-  maxReplicas: {{ .Values.hpa.maxReplicas | default 10 }} # Maximum number of pods allowed during scaling
+  minReplicas: {{ .Values.hpa.minReplicas  }} # Minimum number of pods always running
+  maxReplicas: {{ .Values.hpa.maxReplicas }} # Maximum number of pods allowed during scaling
   metrics:
     - type: Resource # Uses built-in resource metrics
       resource:

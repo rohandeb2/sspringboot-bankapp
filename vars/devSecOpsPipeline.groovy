@@ -1,43 +1,35 @@
-def call(Map config = [:]) {  # create a function that can take some key value pairs and if nothing is given, use empty strings as defaults
+// devSecOpsPipeline.groovy
+def call(Map config = [:]) {
     pipeline {
-        agent { label 'maven' }
-        
-        # it link the jenkins job with the github repository and keep only the last 10 builds to save space
-        options {  
-            githubProjectProperty(projectUrlStr: "https://github.com/rohandeb2/${config.repoName}/")
-            buildDiscarder(logRotator(numToKeepStr: '10'))   # Keep only the last 10 builds to save space
-        }
-    
-        triggers {
-            githubPush()
-        }
+        agent { label 'banking-agent' }
 
         environment {
             AWS_ACCOUNT_ID = "${config.awsAccountId}"
             AWS_REGION     = "${config.awsRegion}"
             IMAGE_REPO     = "${config.appName}"
             IMAGE_TAG      = "${env.BUILD_NUMBER}"
+            ECR_URL        = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
         }
 
         stages {
-            stage('Initialize & Build') {
+            stage('1. Build & Test') {
                 steps {
                     container('maven') {
-                        println "🚀 Starting Build for ${config.appName}"
-                        sh "mvn clean package -DskipTests"   # -DskipTests is used to skip the tests during the build phase, we will run them in a separate stage for better visibility and control
+                        echo "🚀 Building ${config.appName}..."
+                        sh "mvn clean package -DskipTests"
                     }
                 }
             }
 
-            stage('SAST - SonarQube') {
+            stage('2. Static Analysis (SAST)') {
                 steps {
-                    container('maven') { # run inside container
-                        script {   # Allows writing custom Groovy logic (like variables, conditions, etc.)
-                            withSonarQubeEnv('SonarQube-Server') {   #Use SonarQube server configuration stored in Jenkins
+                    container('maven') {
+                        script {
+                            withSonarQubeEnv('SonarQube-Server') {
                                 sh "mvn sonar:sonar -Dsonar.projectKey=${config.appName}"
                             }
                             timeout(time: 5, unit: 'MINUTES') {
-                                def qg = waitForQualityGate()  # wait for sonarqube to finish and get the quality gate result
+                                def qg = waitForQualityGate()
                                 if (qg.status != 'OK') {
                                     error "Pipeline aborted due to quality gate failure: ${qg.status}"
                                 }
@@ -46,62 +38,63 @@ def call(Map config = [:]) {  # create a function that can take some key value p
                     }
                 }
             }
-            # It checks your project’s dependencies (libraries) for known security vulnerabilities using OWASP Dependency Check
-            stage('SCA - OWASP Scan') {
+
+            stage('3. Vulnerability Scan (SCA)') {
                 steps {
-                    // This uses the Jenkins Plugin directly, no container block needed
-                    dependencyCheck additionalArguments: "--scan ./ --format HTML", odcInstallation: 'DP-Check'  #Scan this project and generate a vulnerability report
-                    dependencyCheckPublisher pattern: 'dependency-check-report.html'   # Show the generated report in Jenkins UI
+                    // Plugin-based SCA doesn't need a container block
+                    dependencyCheck additionalArguments: "--scan ./ --format HTML", odcInstallation: 'DP-Check'
+                    dependencyCheckPublisher pattern: 'dependency-check-report.html'
                 }
             }
 
-            stage('Docker Build & Security Scan') {
+            stage('4. Docker Build & Security') {
                 steps {
-                    container('tools') { // Uses the container with Docker & Trivy installed
-                        script {
-                            def fullImageName = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_REPO}:${IMAGE_TAG}" # Construct the full ECR image name using environment variables
-                            
-                            sh "docker build -t ${fullImageName} ."
-                            
-                            // Trivy Scan - Will fail build if CRITICAL vulnerabilities are found
-                            sh "trivy image --exit-code 1 --severity CRITICAL ${fullImageName}"
+                    script {
+                        def fullImage = "${ECR_URL}/${IMAGE_REPO}:${IMAGE_TAG}"
+                        
+                        container('docker-client') {
+                            sh "docker build -t ${fullImage} ."
+                        }
+                        container('trivy') {
+                            sh "trivy image --exit-code 1 --severity CRITICAL ${fullImage}"
                         }
                     }
                 }
             }
 
-            stage('Push to ECR') {
+            stage('5. Push to ECR') {
                 steps {
-                    container('tools') { // Uses the container with AWS CLI
-                        sh """
-                            aws ecr get-login-password --region ${AWS_REGION} | \
-                            docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-                            
-                            docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_REPO}:${IMAGE_TAG}
-                        """
+                    script {
+                        def loginPass = ""
+                        container('aws-cli') {
+                            loginPass = sh(script: "aws ecr get-login-password --region ${AWS_REGION}", returnStdout: true).trim()
+                        }
+                        container('docker-client') {
+                            sh "echo ${loginPass} | docker login --username AWS --password-stdin ${ECR_URL}"
+                            sh "docker push ${ECR_URL}/${IMAGE_REPO}:${IMAGE_TAG}"
+                        }
                     }
                 }
             }
 
-            stage('GitOps Trigger') {
+            stage('6. GitOps: Update Manifests') {
                 steps {
-                    container('tools') {
-                        script {
-                            withCredentials([string(credentialsId: 'github-token', variable: 'GIT_TOKEN')]) { #Fetch GitHub token securely from Jenkins
-                                sh """
-                                    git clone https://${GIT_TOKEN}@github.com/rohandeb2/sspringboot-bankapp.git
-                                    cd sspringboot-bankapp/k8s-manifests/banking-platform/
-                                    sed -i 's/tag: .*/tag: "${IMAGE_TAG}"/' values.yaml
-                                    
-                                    # when jenkins makes a commit it require author name and email so that it can show in git history
-                                    git config user.email "jenkins@rohandevops.co.in"
-                                    git config user.name "Jenkins CI"
-
-                                    git add values.yaml
-                                    git commit -m "chore: bump ${config.appName} to ${IMAGE_TAG} [skip ci]" #chore means non feature change and bump means increase/decrease version
-                                    git push origin main
-                                """
-                            }
+                    container('docker-client') { 
+                        withCredentials([string(credentialsId: 'github-token', variable: 'GIT_TOKEN')]) {
+                            sh """
+                                git config --global user.email "jenkins@rohandevops.co.in"
+                                git config --global user.name "Jenkins-CI"
+                                
+                                git clone https://${GIT_TOKEN}@github.com/${config.gitUser}/${config.gitOpsRepo}.git
+                                cd ${config.gitOpsRepo}
+                                
+                                # Targeted update for your specific app tag
+                                sed -i "s/tag: .*/tag: ${IMAGE_TAG}/" values-prod.yaml
+                                
+                                git add values-prod.yaml
+                                git commit -m "chore: bump ${config.appName} to ${IMAGE_TAG} [skip ci]"
+                                git push origin main
+                            """
                         }
                     }
                 }

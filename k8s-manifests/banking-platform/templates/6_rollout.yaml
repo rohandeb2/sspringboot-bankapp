@@ -111,3 +111,63 @@ spec:
             preStop:
               exec:
                 command: ["/bin/sh", "-c", "sleep 20"] # Graceful shutdown delay to allow traffic drain
+
+
+# how blue green deployment works in Argo Rollouts:
+# 1. The "Stable" State (Version 1)
+# When you first push your code:
+
+# Rollout creates 100% of the pods using Image V1.
+
+# Active Service points to these V1 pods.
+
+# User Traffic: Users hit the active-service and see your banking app.
+
+# 2. The "New Image" Push (Version 2)
+# You update your values.yaml with a new Docker image tag and push to Git.
+
+# ArgoCD syncs the change.
+
+# Rollout sees the new image and starts a new "Preview" ReplicaSet with Image V2.
+
+# The Split: * Active Service stays on V1 (Real users are safe).
+
+# Preview Service switches to V2.
+
+# 3. The "Analysis" Phase (The Interview)
+# Your prePromotionAnalysis kicks in.
+
+# Argo creates an AnalysisRun.
+
+# It queries Prometheus specifically for metrics coming from the pods attached to the Preview Service.
+
+# Logic: "Is the error rate on the Preview pods less than 1%?"
+
+# 4. The "Promotion" (The Traffic Flip)
+# Once the Analysis Template returns Successful:
+
+# Traffic Switch: Argo Rollouts instantly changes the selector of the Active Service to point to the V2 pods.
+
+# Result: Real users are now hitting Version 2.
+
+# Temporary Hold: Version 1 pods stay alive for scaleDownDelaySeconds: 60 just in case you need to do an emergency manual rollback.
+
+# 5. The "Cleanup"
+# After 60 seconds, Version 1 pods are deleted.
+
+# Version 2 is now officially the "Stable/Active" version.
+
+# The cycle resets. The next time you push an image, the new one will start as "Preview" again.
+
+# 🛠️ How to verify this "Flip" manually
+# If you want to see this happen while you are practicing, run this command in your terminal:
+
+# Bash
+# kubectl argo rollouts get rollout test-release-banking-platform -n banking-prod --watch
+# What you will see visually:
+
+# A new revision appears.
+
+# A step appears called pre-promotion analysis.
+
+# Once it turns green, you will see the active checkmark move from the old revision to the new one.

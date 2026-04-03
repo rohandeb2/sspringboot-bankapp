@@ -5,7 +5,11 @@ metadata:
   namespace: {{ .Values.namespace }}  # Deploys ConfigMap into the target namespace
   labels:
     {{- include "banking.labels" . | nindent 4 }}  # Reusable labels for identification, filtering, and consistency
-data:
+                                                    # - specify remove the whitespace before the label and then indent it by 4 spaces to maintain proper YAML structure
+                                                    # include banking.labels -> it will go to helpers.tpl and include all the values that are under banking.labels and then
+                                                  # indent is required to maintain proper YAML structure when including labels
+                                                  # the . is very required Because inside the helper template, we might use:{{ .Values.env }} If we don’t pass  the template won’t know about your values ❌
+data:                             
   SPRING_PROFILES_ACTIVE: {{ .Values.config.springProfile | default "prod" | quote }}  # It tells your app: “Which environment am I running in?”
   LOG_LEVEL: {{ .Values.config.logLevel | default "INFO" | quote }}  # Controls logging verbosity Examples: DEBUG → very detailed logs ---> INFO → normal logs --> ERROR → only errors
                                                                       # quote ->This converts value into a string with quotes
@@ -15,3 +19,6 @@ data:
 
   ENABLE_TRANSACTION_LIMITS: "true"  # Feature flag to enable transaction limits in application logic
   MAX_DAILY_TRANSFER: "50000"  # Business rule: maximum allowed transfer per day
+
+
+# {{ include "banking.fullname" . }}  -> Releasename + chart.name = test-release + banking-platform = test-release-banking-platform

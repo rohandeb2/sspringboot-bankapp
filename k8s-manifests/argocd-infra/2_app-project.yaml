@@ -11,7 +11,7 @@ spec:
   description: "Secure Governance for Springboot BankApp Production Environment" # Project purpose
 
   sourceRepos:
-    - 'https://github.com/rohan/Springboot-BankApp.git' # Only this Git repo is allowed as source (security control)
+    - 'https://github.com/rohandeb2/sspringboot-bankapp.git' # Only this Git repo is allowed as source (security control)
 
   destinations:
     - namespace: banking-prod # Apps can deploy only to this namespace, so we are creating a custom namespace for better isolation and security

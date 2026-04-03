@@ -23,6 +23,7 @@ spec:
     # it won't work with RDS because RDS is a managed service and Velero cannot directly interact with it to perform snapshots or backups. 
     # Velero is designed to back up Kubernetes resources and volumes, but it does not have the capability to back up external managed services like RDS. 
     # For RDS backups, you would typically use AWS's native backup solutions or other database backup tools that are compatible with RDS.
+    
     # hooks:   # Hooks to run custom commands before and after backup for ensuring DB consistency
     #   resources:
     #     - name: banking-db-pause  # Name of hook resource used for DB consistency

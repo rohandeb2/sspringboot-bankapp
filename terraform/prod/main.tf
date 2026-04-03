@@ -17,6 +17,7 @@ module "security" {
   project_name = var.project_name
   vpc_id       = module.vpc.vpc_id
   common_tags  = var.common_tags
+  alb_sg_id = module.alb.alb_security_group_id
 }
 
 # 3. S3 (used by IAM)
@@ -26,6 +27,7 @@ module "s3_app" {
   bucket_purpose = "app"
   environment    = "prod"
   common_tags    = var.common_tags
+  kms_key_arn = var.kms_key_arn
 }
 
 # 4. EKS
@@ -34,6 +36,7 @@ module "eks" {
   project_name           = var.project_name
   kubernetes_version     = "1.31"
   private_app_subnet_ids = module.vpc.private_app_subnet_ids
+  # oidc_provider_arn     = module.security.oidc_provider_arn
 }
 
 # 5. IAM (depends on EKS + S3)
@@ -45,6 +48,8 @@ module "iam" {
   s3_bucket_arn     = module.s3_app.bucket_arn   # ✅ FIXED NAME
   common_tags       = var.common_tags
   depends_on = [module.eks, module.s3_app]
+  namespace            = var.namespace
+  service_account_name = var.service_account_name
 }
 
 # 6. ALB
@@ -54,7 +59,7 @@ module "alb" {
   project_name      = var.project_name
   vpc_id            = module.vpc.vpc_id
   public_subnet_ids = module.vpc.public_subnet_ids
-  certificate_arn   = var.certificate_arn
+  certificate_arn   = module.acm.certificate_arn
   common_tags       = var.common_tags
 }
 
@@ -62,6 +67,8 @@ module "alb" {
 module "rds" {
   source                  = "../modules/rds"
   project_name            = var.project_name
+  db_instance_class = var.db_instance_class
+  db_name           = var.db_name
   environment             = "prod"
   private_data_subnet_ids = module.vpc.private_data_subnet_ids
   rds_sg_id               = module.security.rds_sg_id
@@ -75,6 +82,7 @@ module "acm" {
   project_name  = var.project_name
   domain_name   = var.domain_name
   common_tags   = var.common_tags
+  route53_zone_id = module.route53.zone_id
 }
 
 
@@ -84,8 +92,8 @@ module "route53" {
 
   domain_name = var.domain_name
 
-  certificate_arn = module.acm.certificate_arn
-  acm_domain_validation_options = module.acm.domain_validation_options
+  # certificate_arn = module.acm.certificate_arn
+  # acm_domain_validation_options = module.acm.domain_validation_options
 
   alb_dns_name = module.alb.alb_dns_name
   alb_zone_id  = module.alb.alb_zone_id
@@ -171,15 +179,13 @@ resource "aws_iam_policy" "tempo_s3" {
 # 3. IRSA Role for Tempo
 module "tempo_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.60.0"
   role_name = "tempo-s3-role"
   oidc_providers = {
     main = {
       provider_arn               = module.eks.oidc_provider_arn
       namespace_service_accounts = ["monitoring:tempo-sa"]
-      This MUST match exactly:
 
-# Kubernetes namespace = monitoring
-# ServiceAccount name = tempo-sa
     }
   }
   role_policy_arns = { policy = aws_iam_policy.tempo_s3.arn }

@@ -2,29 +2,29 @@
 namespace: banking-prod
 environment: dev
 team: fintech
-ownerEmail: "your-email@example.com"
+ownerEmail: "ruhondeb28@gmail.com"
 
 # Replica settings
 replicaCount: 2
 
 # Image configuration
 image:
-  repository: your-dockerhub/banking-app
-  tag: latest
+  repository: 959589242185.dkr.ecr.us-east-1.amazonaws.com/banking-app
+  tag: latest 
   pullPolicy: IfNotPresent
 
 # Service configuration
 service:
-  port: 80
-  targetPort: 8080
+  port: 80   # Port exposed by the Kubernetes Service
+  targetPort: 8080  # Port on which the application container listens
 
 # ConfigMap values
 config:
-  springProfile: dev
-  logLevel: DEBUG
-  dbHost: "dev-db.example.com"
+  springProfile: prod
+  logLevel: DEBUG  # use info for prod because it will give you more structured logs and less noise, but for demo we can keep it at debug
+  dbHost: "bankapp-prod-db.c2hcaeaiydw4.us-east-1.rds.amazonaws.com
   dbPort: "3306"
-  dbName: "banking_dev"
+  dbName: "bankappdb"
 
 # Secrets (External Secrets)
 secrets:
@@ -45,7 +45,7 @@ network:
 hpa:
   enabled: true
   minReplicas: 2
-  maxReplicas: 5
+  maxReplicas: 4
   targetCPU: 70
   targetMemory: 80
 
@@ -68,7 +68,7 @@ serviceMonitor:
 ingress:
   enabled: true
   host: "api.dev.rohandevops.co.in"
-  certificateArn: "arn:aws:acm:region:account:certificate/dev-cert-id"
+  certificateArn: "arn:aws:acm:us-east-1:959589242185:certificate/6cc1a4fa-7cfe-4ad8-9eb4-7d6fa49fb04b"
 
 # Istio / Gateway
 istio:

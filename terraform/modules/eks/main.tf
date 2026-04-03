@@ -11,7 +11,7 @@ resource "aws_iam_role" "cluster" {
       Effect = "Allow"    #Grants permission.
       Principal = { Service = "eks.amazonaws.com" }   #Only EKS service can assume this role
     }]
-  })
+  }) 
 }
 
 #It attaches the AmazonEKSClusterPolicy to the IAM role, giving the EKS cluster permissions to manage AWS resources
@@ -31,7 +31,7 @@ resource "aws_eks_cluster" "main" {
 
   vpc_config {
     subnet_ids              = var.private_app_subnet_ids
-    endpoint_private_access = true
+    endpoint_private_access = true 
     endpoint_public_access  = true # Set to false for production to restrict API access to VPC only
   }
 

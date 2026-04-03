@@ -1,6 +1,6 @@
 # bootstrap/s3-backend/main.tf
 provider "aws" {
-  region = "us-east-1"
+  region = "${var.region}"
 }
 # 1. The S3 Bucket for Terraform State
 resource "aws_s3_bucket" "state_bucket" {

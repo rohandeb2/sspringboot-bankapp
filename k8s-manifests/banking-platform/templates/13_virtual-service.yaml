@@ -17,7 +17,7 @@ spec:
     - destination:
         host: {{ include "banking.fullname" . }}-active # Routes traffic to ACTIVE service (stable version from Argo Rollouts)
         port:
-          number: 80 # Port on which the service is listening
+          number: 80 # Port on which the service is listenings
     
     retries:
       attempts: 3 # Retry failed requests up to 3 times

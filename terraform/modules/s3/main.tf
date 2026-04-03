@@ -50,7 +50,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "main" {
   rule {
     id     = "archive-old-versions"
     status = "Enabled"
-
+    filter {}
     noncurrent_version_transition {
       noncurrent_days = 30
       storage_class   = "GLACIER"
@@ -65,7 +65,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "main" {
   rule {
     id     = "loki-log-retention" # lifecycle rule for logs
     status = "Enabled"            # activates the rule
-
+    filter {}
     transition {
       days          = 30         # move logs after 30 days
       storage_class = "GLACIER"  # cheaper cold storage

@@ -88,12 +88,12 @@ module "karpenter_irsa" {
   #This module is downloaded from the Terraform Registry during terraform init and cached locally for reuse
   version = "~> 5.0"
 
-  role_name                          = "${var.project_name}-karpenter-controller-irsa"
+  role_name                          = "bankapp-karpenter-controller-irsa"
   attach_karpenter_controller_policy = false ## We are NOT using default policy, we will attach our own custom policy
 
   oidc_providers = {    ## Defines OIDC trust (connects EKS with AWS IAM)
     main = {
-      provider_arn               = var.oidc_provider_arn  ## ARN of EKS OIDC provider (trust relationship)
+      provider_arn = aws_iam_openid_connect_provider.eks.arn
       namespace_service_accounts = ["karpenter:karpenter-sa"] ## Only this K8s service account can assume this role (Namespace → karpenter Service Account → karpenter-sa)
     }
   }

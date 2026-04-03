@@ -15,7 +15,7 @@ spec:
   source:
     repoURL: https://prometheus-community.github.io/helm-charts  # tell ArgoCD where to find the Helm chart (Prometheus community repo)
     targetRevision: 67.3.0   # Fixed chart version for stability
-    chart: kube-prometheus-stack  # tell ArgoCD which chart to deploy (Prometheus stack with Grafana and Alertmanager)
+    chart: kube-prometheus-stack  # tell ArgoCD which chart to deploy (Prometheus stack with Grafana and Alertmanager)  
 
     helm:
       values: |  # Inline Helm values override

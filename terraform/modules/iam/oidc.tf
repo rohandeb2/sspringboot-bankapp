@@ -46,6 +46,3 @@ resource "aws_iam_role_policy_attachment" "admin_access" {
   policy_arn = "arn:aws:iam::aws:policy/PowerUserAccess"
 }
 
-output "github_actions_role_arn" {
-  value = aws_iam_role.github_actions.arn
-}

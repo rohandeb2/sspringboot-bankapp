@@ -3,14 +3,13 @@ variable "project_name" {
   type        = string
 }
 
-variable "common_tags" {
-  description = "Common tags applied to all resources"
-  type        = map(string)
-  default     = {}
+variable "s3_bucket_arn" {
+  description = "ARN of the S3 bucket the application will access"
+  type        = string
 }
 
 variable "oidc_provider_arn" {
-  description = "OIDC provider ARN for EKS (used in IRSA)"
+  description = "OIDC provider ARN for IRSA"
   type        = string
 }
 
@@ -19,21 +18,18 @@ variable "oidc_provider_url" {
   type        = string
 }
 
-variable "s3_bucket_arn" {
-  description = "S3 bucket ARN the application will access"
-  type        = string
-}
-
-# Kubernetes specific metadata for the Trust Policy
-
 variable "namespace" {
-  description = "Kubernetes namespace"
+  description = "Kubernetes namespace of the application"
   type        = string
-  default     = "default"
 }
 
 variable "service_account_name" {
-  description = "Kubernetes service account name"
+  description = "Kubernetes service account name for the application"
   type        = string
-  default     = "bank-app-sa"
+}
+
+variable "common_tags" {
+  description = "Common tags applied to resources"
+  type        = map(string)
+  default     = {}
 }

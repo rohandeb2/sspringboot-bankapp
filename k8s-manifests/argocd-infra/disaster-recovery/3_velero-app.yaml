@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://vmware-tanzu.github.io/helm-charts
     chart: velero
-    targetRevision: 7.x.x
+    targetRevision: 7.9.0
     helm:
       values: |
         configuration:
@@ -35,7 +35,7 @@ spec:
             create: true
             name: velero-server
             annotations:
-              eks.amazonaws.com/role-arn: arn:aws:iam::<ACCOUNT_ID>:role/bankapp-prod-velero-irsa
+              eks.amazonaws.com/role-arn: arn:aws:iam::959589242185:role/bankapp-prod-velero-irsa
 
         # FIX: Remove secretContents for security. 
         # Velero will now use the IAM role for AWS APIs.

@@ -53,13 +53,62 @@ resource "aws_iam_role_policy_attachment" "app_attach" {
   policy_arn = aws_iam_policy.app_policy.arn # attach policy
   role       = aws_iam_role.app_role.name   # attach to role
 }
+# 1. IAM Policy for ECR Access
+resource "aws_iam_policy" "jenkins_ecr_policy" {
+  name        = "jenkins-agent-ecr-policy"
+  description = "Allows Jenkins agents to push images to ECR"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:GetRepositoryPolicy",
+          "ecr:DescribeRepositories",
+          "ecr:ListImages",
+          "ecr:DescribeImages",
+          "ecr:BatchGetImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+          "ecr:PutImage"
+        ]
+        Resource = "*" # In prod, limit this to your specific ECR ARNs
+      }
+    ]
+  })
+}
+
+# 2. The IRSA Role (OIDC Link)
+module "jenkins_agent_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.0"
+
+  role_name = "jenkins-agent-irsa-role"
+
+  oidc_providers = {
+    main = {
+      provider_arn               = var.oidc_provider_arn
+      namespace_service_accounts = ["jenkins:jenkins-agent-sa"] # Namespace:SA_Name
+    }
+  }
+
+  role_policy_arns = {
+    policy = aws_iam_policy.jenkins_ecr_policy.arn
+  }
+}
+
 
 # modules/iam/main.tf
 module "velero_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version = "~> 5.0"
 
-  role_name = "${var.project_name}-velero-irsa"
+  role_name = "bankapp-prod-velero-irsa"
   oidc_providers = {
     main = {
       provider_arn               = var.oidc_provider_arn

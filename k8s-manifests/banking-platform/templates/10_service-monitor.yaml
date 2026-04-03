@@ -1,5 +1,4 @@
-#
-
+#This file tells Prometheus how to find and scrape metrics from your application
 
 {{- if .Values.serviceMonitor.enabled -}} # Create ServiceMonitor only if enabled in values.yaml
 apiVersion: monitoring.coreos.com/v1 # API for Prometheus Operator CRDs

@@ -15,7 +15,7 @@
    ```
 
 - enable nginx 
-    ```bash
+    ```bashRE   
     sudo systemctl enable nginx
     ```
 

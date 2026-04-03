@@ -8,4 +8,4 @@ metadata:
   namespace: jenkins
   annotations:
     # This is the "Magic Link" to your Terraform AWS Role
-    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/jenkins-agent-irsa-role
+    eks.amazonaws.com/role-arn: arn:aws:iam::959589242185:role/jenkins-agent-irsa-role

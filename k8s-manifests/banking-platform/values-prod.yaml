@@ -1,15 +1,15 @@
 # Global settings
-namespace: banking
+namespace: banking-prod
 environment: prod
 team: fintech
-ownerEmail: "prod-owner@company.com"
+ownerEmail: "ruhondeb28@gmail.com"
 
 # Replica settings (HIGH AVAILABILITY)
-replicaCount: 4
+replicaCount: 2
 
 # Image configuration (NO latest in prod ❌)
 image:
-  repository: your-dockerhub/banking-app
+  repository: 959589242185.dkr.ecr.us-east-1.amazonaws.com/banking-app
   tag: "v1.0.0"   # MUST be versioned
   pullPolicy: IfNotPresent
 
@@ -21,10 +21,10 @@ service:
 # ConfigMap values
 config:
   springProfile: prod
-  logLevel: INFO
-  dbHost: "prod-db.example.com"
+  logLevel: DEBUG  # use info for prod because it will give you more structured logs and less noise, but for demo we can keep it at debug
+  dbHost: "bankapp-prod-db.c2hcaeaiydw4.us-east-1.rds.amazonaws.com"
   dbPort: "3306"
-  dbName: "banking_prod"
+  dbName: "bankappdb"
 
 # Secrets
 secrets:
@@ -34,7 +34,7 @@ secrets:
 serviceAccount:
   create: true
   annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam::<account-id>:role/banking-prod-irsa-role
+    eks.amazonaws.com/role-arn: arn:aws:iam:959589242185:role/banking-prod-app-irsa-role
 
 # Network Policy
 network:
@@ -43,10 +43,11 @@ network:
 # HPA (AGGRESSIVE SCALING)
 hpa:
   enabled: true
-  minReplicas: 3
-  maxReplicas: 10
-  targetCPU: 60
-  targetMemory: 75
+  minReplicas: 2 # increase min replicas for HA
+  maxReplicas: 4 # use it efficiently as per the aspected traffic in prod
+  targetCPU: 70
+  targetMemory: 80
+
 
 # Resources (STRICT in prod)
 resources:
@@ -67,7 +68,7 @@ serviceMonitor:
 ingress:
   enabled: true
   host: "api.rohandevops.co.in"
-  certificateArn: "arn:aws:acm:region:account:certificate/prod-cert-id"
+  certificateArn: "arn:aws:acm:us-east-1:959589242185:certificate/6cc1a4fa-7cfe-4ad8-9eb4-7d6fa49fb04b"
 
 # Istio
 istio:
@@ -146,3 +147,6 @@ observability:
 #   enabled: true
 #   interval: 30s
 #   scrapeTimeout: 10s
+
+
+

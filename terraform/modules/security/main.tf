@@ -39,7 +39,7 @@ resource "aws_security_group" "eks_nodes" {
   from_port       = 80
   to_port         = 80
   protocol        = "tcp"
-  security_groups = [alb_sg_id]
+  security_groups = [var.alb_sg_id]
   description     = "Allow HTTP traffic from ALB to nodes (for app access)"
   }
 

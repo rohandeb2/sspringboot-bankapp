@@ -12,6 +12,6 @@ metadata:
     app.kubernetes.io/component: distributed-tracing # App component type
     env: production                        # Environment label
   annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/tempo-s3-role # IAM role for Tempo pod to access S3 (IRSA)
+    eks.amazonaws.com/role-arn: arn:aws:iam::959589242185:role/tempo-s3-role # IAM role for Tempo pod to access S3 (IRSA)
     eks.amazonaws.com/sts-regional-endpoints: "true" # Use regional STS endpoints for token issuance (security best practice)
     eks.amazonaws.com/token-expiration: "86400"     # Token validity in seconds (24h)

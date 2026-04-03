@@ -4,10 +4,15 @@ variable "project_name" {
 }
 
 variable "kubernetes_version" {
-  description = "Kubernetes version for EKS cluster"
+  description = "Kubernetes version for the EKS cluster"
   type        = string
-  default     = "1.31"
 }
+
+
+# variable "oidc_provider_arn" {
+#   description = "OIDC provider ARN for IRSA (used by Karpenter)"
+#   type        = string
+# }
 
 variable "private_app_subnet_ids" {
   description = "List of private app subnet IDs for EKS"

@@ -12,7 +12,7 @@ spec:
   source:
     repoURL: https://SonarSource.github.io/helm-charts-sonarqube  # Helm chart repository URL
     chart: sonarqube               # Name of the Helm chart to deploy
-    targetRevision: 10.x.x         # Chart version to deploy
+    targetRevision: 10.0.0          # Chart version to deploy
     helm:
       values: |                    # Inline Helm values (custom configuration for SonarQube)
         
