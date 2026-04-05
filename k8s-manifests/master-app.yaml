@@ -1,32 +1,26 @@
-# it will Manage all  Argo CD infrastructure (AppProject, ApplicationSet, etc.) in a single place using GitOps
-# This is a parent application managing everything like under argocd-infra folder argocd will scan all yaml file and apply all resource automatically
-
-apiVersion: argoproj.io/v1alpha1 # Argo CD API version
-kind: Application # Defines a single Argo CD application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
 metadata:
-  name: root-banking-stack # Root (parent) application managing infra
-  namespace: argocd # Must exist in Argo CD namespace
+  name: root-banking-stack
+  namespace: argocd
   finalizers:
-    - resources-finalizer.argocd.argoproj.io # Ensures child resources/apps are deleted safely before this app is removed
+    - resources-finalizer.argocd.argoproj.io
 spec:
-  project: default # Uses default project because it manages AppProject and other infra (higher-level resources)
-  
+  project: default
   source:
-    repoURL: 'https://github.com/rohandeb2/sspringboot-bankapp' # Git repo containing infra configs
-    targetRevision: HEAD # Tracks latest commit (not ideal for strict prod, but common in setups)
-    path: k8s-manifests/argocd-infra  # Path to CD infra YAMLs (AppProject, ApplicationSet, etc.)
+    repoURL: 'https://github.com/rohandeb2/sspringboot-bankapp'
+    targetRevision: HEAD
+    path: k8s-manifests/argocd-infra
     directory:
-      recurse: true # Reads all YAML files recursively inside this folder
-      exclude: 'master-app.yaml' # Exclude this file to prevent circular reference (this file is the parent app itself)
-
+      recurse: true
   destination:
-    server: 'https://kubernetes.default.svc' # Deploys to in-cluster Kubernetes
-    namespace: argocd # All infra resources are created in argocd namespace
-
+    server: 'https://kubernetes.default.svc'
+    namespace: argocd
   syncPolicy:
     automated:
-      prune: true # Deletes resources that are removed from Git (keeps cluster clean)
-      selfHeal: true # Reverts any manual changes in cluster back to Git state
+      prune: true
+      selfHeal: true
     syncOptions:
-      - CreateNamespace=true # Creates namespace if it doesn't exist
-      - ApplyOutOfSyncOnly=true # Optimizes sync by applying only changed resources
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+      - ServerSideApply=true

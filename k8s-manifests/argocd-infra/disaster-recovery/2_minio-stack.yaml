@@ -1,34 +1,40 @@
-#This file deploys MinIO using ArgoCD so that it is managed as code.
-# MinIO acts as a persistent object storage for Velero backups
-
-apiVersion: argoproj.io/v1alpha1  # ArgoCD Application CRD API version (used to define apps in ArgoCD)
-kind: Application  # Declares this as an ArgoCD Application resource
+apiVersion: argoproj.io/v1alpha1
+kind: Application
 metadata:
-  name: minio  # Name of the ArgoCD application (identifier inside ArgoCD)
-  namespace: argocd  # Namespace where ArgoCD controller is running
+  name: minio
+  namespace: argocd
 spec:
-  project: default  # ArgoCD project this app belongs to (used for RBAC and grouping)
+  project: default
   source:
-    repoURL: https://charts.bitnami.com/bitnami  # Helm chart repository for MinIO
-    chart: minio  # Name of the Helm chart to deploy
-    targetRevision: 14.0.0  # Specific version of the MinIO chart to ensure stability
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: minio
+    targetRevision: 14.6.16
     helm:
-      values: |  # Helm values to configure MinIO deployment
+      values: |
         auth:
-          rootUser: "rohan-admin"  # Admin username for MinIO
-          rootPassword: "secure-storage-pass"  # Admin password for MinIO
+          rootUser: "rohan-admin"
+          rootPassword: "secure-storage-pass"
         persistence:
-          enabled: true  # Enable persistent storage for MinIO data
-          size: 50Gi  # Allocate 50Gi for MinIO data storage
+          enabled: true
+          size: 50Gi
         service:
-          type: ClusterIP  # Internal-only service (not exposed externally)
-        defaultBuckets: "velero-backups"  # Create a default bucket for Velero backups
+          type: ClusterIP
+        defaultBuckets: "velero-backups"
+        podSecurityContext:
+          enabled: true
+          runAsNonRoot: true
+          runAsUser: 1001
+          fsGroup: 1001
+        containerSecurityContext:
+          enabled: true
+          runAsNonRoot: true
+          runAsUser: 1001
   destination:
-    server: https://kubernetes.default.svc  # Target Kubernetes cluster (local cluster where ArgoCD runs)
-    namespace: velero  # Namespace where MinIO will be deployed
+    server: https://kubernetes.default.svc
+    namespace: velero
   syncPolicy:
     automated:
-      prune: true  # Automatically delete resources if removed from Git
-      selfHeal: true  # Auto-correct drift between cluster and Git
+      prune: true
+      selfHeal: true
     syncOptions:
-      - CreateNamespace=true  # Automatically create namespace if it doesn’t exist
+      - CreateNamespace=true

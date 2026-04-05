@@ -46,7 +46,7 @@ spec:
 
           ingress:
             enabled: true
-            ingressClassName: nginx
+            ingressClassName: alb
             hosts:
               - grafana.rohandevops.co.in
 
