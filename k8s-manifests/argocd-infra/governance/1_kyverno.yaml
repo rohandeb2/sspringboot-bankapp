@@ -1,25 +1,21 @@
-# this file deploys Kyverno, which is a policy engine for Kubernetes that allows you to enforce policies on your cluster resources. 
-# It is used for governance and security purposes, ensuring that your cluster adheres to best practices and compliance requirements. 
-# By deploying Kyverno through ArgoCD, you can manage your policies as code and ensure they are consistently applied across your cluster.
-
-
-apiVersion: argoproj.io/v1alpha1  # ArgoCD Application API version
-kind: Application  # Defines this as an ArgoCD Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
 metadata:
-  name: kyverno  # Name of the application (Kyverno policy engine)
-  namespace: argocd  # Namespace where ArgoCD manages this Application
+  name: kyverno
+  namespace: argocd
 spec:
-  project: default  # ArgoCD project controlling permissions and policies
+  project: default
   source:
-    repoURL: https://kyverno.github.io/kyverno/  # tell ArgoCD where to fetch the Helm chart from (Kyverno's official Helm repo)
-    chart: kyverno  # tell which component to install (Kyverno policy engine)
-    targetRevision: 3.2.0  # Version of Kyverno chart to deploy (keeps deployment stable)
+    repoURL: https://kyverno.github.io/kyverno/
+    chart: kyverno
+    targetRevision: 3.3.3
   destination:
-    server: https://kubernetes.default.svc  # Deploys to the in-cluster Kubernetes cluster
-    namespace: kyverno  # Namespace where Kyverno components will be installed
+    server: https://kubernetes.default.svc
+    namespace: kyverno
   syncPolicy:
     automated:
-      prune: true  # Removes resources if they are deleted from Git
-      selfHeal: true  # Automatically fixes drift between cluster and Git
+      prune: true
+      selfHeal: true
     syncOptions:
-      - CreateNamespace=true  # Automatically creates the namespace if it does not exist
+      - CreateNamespace=true
+      - Replace=true
