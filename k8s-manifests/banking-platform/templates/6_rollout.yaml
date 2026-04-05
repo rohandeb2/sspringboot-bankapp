@@ -16,26 +16,40 @@ spec:
       activeService: {{ include "banking.fullname" . }}-active # All real users hit this service
       previewService: {{ include "banking.fullname" . }}-preview # Users do NOT hit this (unless you expose it)
       autoPromotionEnabled: false # Deployment will pause after new version is ready, waiting for manual promotion
-      prePromotionAnalysis: #Before switching traffic: Runs analysis checks
-      #Before promoting, go find an AnalysisTemplate named banking-success-rate-check and run it
+      prePromotionAnalysis:
         templates:
-          - templateName: banking-success-rate-check # Runs analysis (e.g., metrics/alerts) before promotion
-                          # identify the analysis template by templateName and run it before promotion. If the analysis fails, the rollout will pause and not promote to stable.
+          - templateName: banking-success-rate-check
+        args:
+          - name: app-name
+            value: {{ include "banking.fullname" . }} # Passes app name as argument to the analysis template (used in Prometheus queries to filter metrics for this specific app) 
       scaleDownDelaySeconds: 60 # After promotion: Old version is NOT killed immediately 👉 Waits 60 seconds
 
   template: # Pod template defining the application workload
     metadata:
       labels:
         app: {{ include "banking.fullname" . }} # Labels applied to pods for selector matching
+      annotations:
+        proxy.istio.io/config: '{"holdApplicationUntilProxyStarts": true}' # Ensures Istio sidecar is ready before app starts (prevents traffic loss during startup)
     spec:
       serviceAccountName: {{ include "banking.fullname" . }} # Associates pod with IAM-enabled ServiceAccount (IRSA)
       securityContext:
+        allowPrivilegeEscalation: false # Prevents privilege escalation for security hardening
         runAsNonRoot: true # Enforces container to run as non-root user for security
         runAsUser: 1000 # Specifies user ID inside container
         fsGroup: 2000 # Ensures shared file system permissions across containers
+        seccompProfile:
+          type: RuntimeDefault # Uses default seccomp profile for additional security
       containers:
-        - name: banking-api # Container name
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}" # Uses dynamic image repo and tag
+        - name: banking-api
+          securityContext:                    # ← ADD THIS (container-level)
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }} # Controls when image is pulled
           ports:
             - name: http # Named port for service reference

@@ -1,59 +1,56 @@
-# We create this to deploy and manage the Istio ingress gateway, which is the entry point for external traffic into your cluster.
-# 👉 This file exposes your services to the outside world (like APIs, web apps)
-
-apiVersion: argoproj.io/v1alpha1  # ArgoCD Application API version
-kind: Application  # Defines this as an ArgoCD Application resource
+apiVersion: argoproj.io/v1alpha1
+kind: Application
 metadata:
-  name: istio-ingressgateway  # Name of the ArgoCD app (manages Istio ingress gateway)
-  namespace: istio-system  # Namespace where this Application object is stored
+  name: istio-ingressgateway
+  namespace: argocd
 spec:
-  project: default  # project means logical grouping for control and permissions
+  project: default
   source:
-    repoURL: https://istio-release.storage.googleapis.com/charts  # tells ArgoCD where to fetch the Helm chart from
-    chart: gateway  # tells which component to install (here: ingress gateway)
-    targetRevision: 1.22.0  # Specific Istio version (keeps deployment stable)
+    repoURL: https://istio-release.storage.googleapis.com/charts
+    chart: gateway
+    targetRevision: 1.22.0
     helm:
-      values: |  # Custom Helm values to configure the ingress gateway (overrides defaults in the chart)
-        service:                         #This configures how your gateway is exposed
-          type: LoadBalancer             # Exposes the gateway externally via cloud LoadBalancer
-
-          #This makes your Istio gateway publicly accessible using AWS NLB
-          annotations:
-            service.beta.kubernetes.io/aws-load-balancer-type: "external"            # Use external AWS load balancer
-            service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"              # Targets EC2 instances
-            service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"            # Public internet access
-          ports:                           #on these ports, the gateway will listen for incoming traffic and also send health checks to monitor its status
-            - name: status-port            # Port for health/status checks
-              port: 15021                  # External port for status checks
-              targetPort: 15021            # Internal container port for status checks
-
-            - name: http2                  # Port for regular HTTP traffic
-              port: 80                     # External HTTP port
-              targetPort: 8080             # Internal container port
-
-            - name: https                  # HTTPS traffic port
-              port: 443                    # External HTTPS port
-              targetPort: 8443             # Internal container port
-
-        autoscaling:
-          enabled: true  # Enables Horizontal Pod Autoscaler
-          minReplicas: 2  # Minimum number of pods
-          maxReplicas: 5  # Maximum number of pods
-          targetCPUUtilizationPercentage: 80  # Scale when CPU crosses 80%
-
-        resources:
-          requests:
-            cpu: 100m  # Minimum CPU guaranteed per pod
-            memory: 128Mi  # Minimum memory guaranteed
-          limits:
-            cpu: 2000m  # Maximum CPU allowed per pod
-            memory: 1024Mi  # Maximum memory allowed
+      skipCrds: false
+      values: |
+        defaults:
+          service:
+            type: LoadBalancer
+            annotations:
+              service.beta.kubernetes.io/aws-load-balancer-type: "external"
+              service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
+              service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+            ports:
+              - name: status-port
+                port: 15021
+                protocol: TCP
+                targetPort: 15021
+              - name: http2
+                port: 80
+                protocol: TCP
+                targetPort: 8080
+              - name: https
+                port: 443
+                protocol: TCP
+                targetPort: 8443
+          autoscaling:
+            enabled: true
+            minReplicas: 2
+            maxReplicas: 5
+            targetCPUUtilizationPercentage: 80
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 2000m
+              memory: 1024Mi
   destination:
-    server: https://kubernetes.default.svc  # tell ArgoCD to deploy in the current cluster
-    namespace: istio-system  # Namespace where ingress gateway will run
+    server: https://kubernetes.default.svc
+    namespace: istio-system
   syncPolicy:
     automated:
-      prune: true  # Deletes resources removed from Git
-      selfHeal: true 
+      prune: true
+      selfHeal: true
     syncOptions:
-      - CreateNamespace=true # Automatically creates namespace if not exists
+      - CreateNamespace=true
+      - ServerSideApply=true

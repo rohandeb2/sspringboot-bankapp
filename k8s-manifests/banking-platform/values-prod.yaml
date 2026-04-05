@@ -10,7 +10,7 @@ replicaCount: 2
 # Image configuration (NO latest in prod ❌)
 image:
   repository: 959589242185.dkr.ecr.us-east-1.amazonaws.com/banking-app
-  tag: "v1.0.0"   # MUST be versioned
+  tag: "v1.0.2"   # MUST be versioned
   pullPolicy: IfNotPresent
 
 # Service configuration
@@ -52,11 +52,11 @@ hpa:
 # Resources (STRICT in prod)
 resources:
   requests:
-    cpu: "500m"
-    memory: "1Gi"
+    cpu: 200m        # ← reduce from 500m
+    memory: 512Mi    # ← reduce from 1Gi
   limits:
-    cpu: "1"
-    memory: "2Gi"
+    cpu: 500m        # ← reduce from 1
+    memory: 1Gi      # ← reduce from 2Gi
 
 # Service Monitor
 serviceMonitor:
@@ -68,7 +68,7 @@ serviceMonitor:
 ingress:
   enabled: true
   host: "api.rohandevops.co.in"
-  certificateArn: "arn:aws:acm:us-east-1:959589242185:certificate/6cc1a4fa-7cfe-4ad8-9eb4-7d6fa49fb04b"
+  certificateArn: "arn:aws:acm:us-east-1:959589242185:certificate/a667a38c-4272-4495-8389-5d7b3ecc492a"
 
 # Istio
 istio:

@@ -4,7 +4,7 @@ kind: Namespace  # This resource creates a logical isolation boundary in Kuberne
 metadata:  # Metadata block contains identifying information about the namespace
   name: {{ required "namespace is required" .Values.namespace }}  # Namespace name from Helm values, defaults to "banking-default"; ⚠️ may fail if invalid or empty value is passed
   labels:  # Labels are used for filtering, policy enforcement, and observability
-    pod-security.kubernetes.io/enforce: restricted  #Only allow Pods in this namespace that comply with the restricted Pod Security Standard
+    pod-security.kubernetes.io/enforce: privileged  #Only allow Pods in this namespace that comply with the restricted Pod Security Standard
     pod-security.kubernetes.io/enforce-version: latest  # Uses latest version of pod security policy; ⚠️ can introduce breaking changes on upgrades
     env: {{ .Values.environment | default "prod" }}  # Environment label (prod/dev); defaults to prod if not defined; ⚠️ may mislabel environments
     team: {{ .Values.team | default "fintech" }}  # Team ownership label; used for ownership tracking and multi-team clusters

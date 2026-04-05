@@ -12,7 +12,7 @@ spec:
     name: {{ include "banking.fullname" . }}  # Name of the rollout (from Helm template)
 
   updatePolicy:
-    updateMode: "off"                  # it will only provide recommendations but won't automatically update pods (prevents conflicts with HPA)
+    updateMode: "Off"                  # it will only provide recommendations but won't automatically update pods (prevents conflicts with HPA)
 
   resourcePolicy:
     containerPolicies:
