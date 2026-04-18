@@ -116,8 +116,7 @@ spec:
     rules:
     - alert: DBConnectionPoolHigh  # DB connection saturation
       expr: |
-        HikariCP_connections_active  # Active DB connections
-        / HikariCP_connections_max > 0.9  # >90% utilization
+        HikariCP_connections_active / HikariCP_connections_max > 0.9
       for: 2m  # Persist for 2 mins
       labels:
         severity: warning  # Warning
