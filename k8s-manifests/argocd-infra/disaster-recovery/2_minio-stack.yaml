@@ -11,6 +11,11 @@ spec:
     targetRevision: 14.6.16
     helm:
       values: |
+        image:
+          registry: 959589242185.dkr.ecr.us-east-1.amazonaws.com
+          repository: minio
+          tag: latest
+          pullPolicy: IfNotPresent
         auth:
           rootUser: "rohan-admin"
           rootPassword: "secure-storage-pass"
