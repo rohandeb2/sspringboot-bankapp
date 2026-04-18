@@ -16,6 +16,12 @@ spec:
           repository: minio
           tag: latest
           pullPolicy: IfNotPresent
+        command:
+          - minio
+          - server
+          - /bitnami/minio/data
+          - --console-address
+          - :9001
         auth:
           rootUser: "rohan-admin"
           rootPassword: "secure-storage-pass"
