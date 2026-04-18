@@ -16,6 +16,18 @@ spec:
   destination:
     server: 'https://kubernetes.default.svc'
     namespace: argocd
+  ignoreDifferences:
+    - group: external-secrets.io
+      kind: ExternalSecret
+      jsonPointers:
+        - /metadata/resourceVersion
+        - /metadata/generation
+    - group: kyverno.io
+      kind: ClusterPolicy
+      jsonPointers:
+        - /metadata/resourceVersion
+        - /metadata/generation
+        - /spec/rules
   syncPolicy:
     automated:
       prune: true
@@ -24,3 +36,4 @@ spec:
       - CreateNamespace=true
       - ApplyOutOfSyncOnly=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
