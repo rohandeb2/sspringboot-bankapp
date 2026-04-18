@@ -8,9 +8,8 @@ spec:
   source:
     repoURL: https://istio-release.storage.googleapis.com/charts
     chart: gateway
-    targetRevision: 1.22.0
+    targetRevision: 1.26.8
     helm:
-      skipCrds: false
       values: |
         defaults:
           service:
@@ -19,24 +18,10 @@ spec:
               service.beta.kubernetes.io/aws-load-balancer-type: "external"
               service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
               service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
-            ports:
-              - name: status-port
-                port: 15021
-                protocol: TCP
-                targetPort: 15021
-              - name: http2
-                port: 80
-                protocol: TCP
-                targetPort: 8080
-              - name: https
-                port: 443
-                protocol: TCP
-                targetPort: 8443
           autoscaling:
             enabled: true
-            minReplicas: 2
-            maxReplicas: 5
-            targetCPUUtilizationPercentage: 80
+            minReplicas: 1
+            maxReplicas: 3
           resources:
             requests:
               cpu: 100m

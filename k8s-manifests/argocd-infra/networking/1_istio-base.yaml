@@ -7,7 +7,7 @@ apiVersion: argoproj.io/v1alpha1  # API version for ArgoCD Application resource 
 kind: Application  # Declares this as an ArgoCD Application (used to manage deployment of apps)
 metadata:
   name: istio-base  # Name of this ArgoCD application (unique identifier in ArgoCD)
-  namespace: istio-system  # Namespace where ArgoCD stores this Application object (not where app runs)
+  namespace: argocd  # Namespace where ArgoCD stores this Application object (not where app runs)
   finalizers:
     - resources-finalizer.argocd.argoproj.io  # Ensures all resources are deleted when this app is deleted (clean cleanup)
 spec:

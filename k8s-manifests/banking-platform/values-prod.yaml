@@ -4,13 +4,13 @@ environment: prod
 team: fintech
 ownerEmail: "ruhondeb28@gmail.com"
 
-# Replica settings (HIGH AVAILABILITY)
-replicaCount: 2
+# Replica settings
+replicaCount: 1
 
-# Image configuration (NO latest in prod ❌)
+# Image configuration
 image:
   repository: 959589242185.dkr.ecr.us-east-1.amazonaws.com/banking-app
-  tag: "v1.0.2"   # MUST be versioned
+  tag: "v1.0.2"
   pullPolicy: IfNotPresent
 
 # Service configuration
@@ -21,7 +21,7 @@ service:
 # ConfigMap values
 config:
   springProfile: prod
-  logLevel: DEBUG  # use info for prod because it will give you more structured logs and less noise, but for demo we can keep it at debug
+  logLevel: DEBUG
   dbHost: "bankapp-prod-db.c2hcaeaiydw4.us-east-1.rds.amazonaws.com"
   dbPort: "3306"
   dbName: "bankappdb"
@@ -30,123 +30,54 @@ config:
 secrets:
   awsSecretName: "banking-prod-db-secret"
 
-# Service Account (IRSA REQUIRED in prod)
+# Service Account (IRSA)
 serviceAccount:
   create: true
   annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam:959589242185:role/banking-prod-app-irsa-role
+    eks.amazonaws.com/role-arn: arn:aws:iam::959589242185:role/bankapp-prod-app-irsa-role
 
 # Network Policy
 network:
-  databaseCidr: "10.10.0.0/24"  # 🔒 tighter CIDR (not /16)
+  databaseCidr: "10.0.0.0/16"
 
-# HPA (AGGRESSIVE SCALING)
+# HPA - disabled until Layer 9 (Prometheus installed)
 hpa:
-  enabled: true
-  minReplicas: 2 # increase min replicas for HA
-  maxReplicas: 4 # use it efficiently as per the aspected traffic in prod
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 4
   targetCPU: 70
   targetMemory: 80
 
-
-# Resources (STRICT in prod)
+# Resources
 resources:
   requests:
-    cpu: 200m        # ← reduce from 500m
-    memory: 512Mi    # ← reduce from 1Gi
+    cpu: 200m
+    memory: 512Mi
   limits:
-    cpu: 500m        # ← reduce from 1
-    memory: 1Gi      # ← reduce from 2Gi
+    cpu: 500m
+    memory: 1Gi
 
-# Service Monitor
+# ServiceMonitor - disabled until Layer 9 (Prometheus installed)
 serviceMonitor:
-  enabled: true
+  enabled: false
   path: "/actuator/prometheus"
-  interval: "15s"  # faster scraping in prod
+  interval: "15s"
 
-# Ingress (ALB)
+# Ingress - disabled until Layer 6 (Istio installed)
 ingress:
-  enabled: true
+  enabled: false
   host: "api.rohandevops.co.in"
-  certificateArn: "arn:aws:acm:us-east-1:959589242185:certificate/a667a38c-4272-4495-8389-5d7b3ecc492a"
+  certificateArn: "arn:aws:acm:us-east-1:959589242185:certificate/ee3029e8-97bb-4a58-bb6a-3759d34c17ae"
 
-# Istio
+# Istio - disabled until Layer 6
 istio:
+  enabled: false
   host: "api.rohandevops.co.in"
+
+# VPA - disabled until Layer 14
+vpa:
+  enabled: false
 
 # Observability
 observability:
   otelCollectorEndpoint: "http://otel-collector.monitoring.svc.cluster.local:4317"
-
-# # --- GLOBAL IDENTIFIERS ---
-# environment: production
-# team: fintech-core
-# domain: rohandevops.co.in
-
-# # --- NAMESPACE ---
-# namespace: banking-prod
-
-# # --- COMPUTE & SCALING (High Availability) ---
-# replicaCount: 3 # Start with 3 for HA (across multiple AZs)
-
-# hpa:
-#   enabled: true
-#   minReplicas: 3
-#   maxReplicas: 10
-#   targetCPUUtilizationPercentage: 70
-#   targetMemoryUtilizationPercentage: 80
-
-# # --- IMAGE (Production Registry) ---
-# image:
-#   repository: 1234567890.dkr.ecr.us-east-1.amazonaws.com/banking-api
-#   tag: "v1.2.0-stable" # Always use specific tags in prod, NEVER "latest"
-#   pullPolicy: IfNotPresent
-
-# # --- RESOURCE GOVERNANCE (Guaranteed QoS) ---
-# resources:
-#   requests:
-#     cpu: "500m"      # Half a core guaranteed
-#     memory: "1Gi"    # 1GB RAM guaranteed
-#   limits:
-#     cpu: "1000m"     # Burst to 1 core
-#     memory: "2Gi"    # Hard limit to prevent OOM killing node
-
-# # --- SECURITY & AWS INTEGRATION (IRSA) ---
-# serviceAccount:
-#   create: true
-#   # Links the K8s Pod to the IAM Role created in Terraform
-#   annotations:
-#     eks.amazonaws.com/role-arn: arn:aws:iam::1234567890:role/banking-prod-irsa-role
-
-# # --- EXTERNAL SECRETS (AWS Secrets Manager) ---
-# secrets:
-#   enabled: true
-#   awsSecretName: "prod/banking/db-credentials"
-#   refreshInterval: "1h"
-
-# # --- NETWORKING (Ingress/ALB) ---
-# ingress:
-#   enabled: true
-#   className: alb
-#   certificateArn: arn:aws:acm:us-east-1:1234567890:certificate/xyz
-#   annotations:
-#     alb.ingress.kubernetes.io/scheme: internet-facing
-#     alb.ingress.kubernetes.io/target-type: ip
-#     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
-#     alb.ingress.kubernetes.io/ssl-redirect: '443'
-#     # AWS Certificate Manager ARN
-#     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:1234567890:certificate/your-cert-id
-#   hosts:
-#     - host: api.rohandevops.co.in
-#       paths:
-#         - path: /
-#           pathType: Prefix
-
-# # --- OBSERVABILITY ---
-# serviceMonitor:
-#   enabled: true
-#   interval: 30s
-#   scrapeTimeout: 10s
-
-
-

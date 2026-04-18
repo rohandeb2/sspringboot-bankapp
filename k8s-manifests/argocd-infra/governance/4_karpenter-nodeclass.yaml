@@ -1,20 +1,18 @@
-# We create this file to define the infrastructure blueprint (AMI, IAM role, subnet, security group, tags) 
-# that Karpenter uses to provision EC2 nodes automatically in AWS.
-
-apiVersion: karpenter.k8s.aws/v1beta1  #rsion for Karpenter AWS resources used to define EC2 node configuration
-kind: EC2NodeClass  # Defines how EC2 instances (nodes) should be configured and launched by Karpenter
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
 metadata:
-  name: default  # Name of this EC2 node template used by NodePool
+  name: default
 spec:
-  amiFamily: AL2  # Uses Amazon Linux 2 EKS-optimized AMI for EC2 nodes
-  role: "bankapp-prod-karpenter-instance-profile"  # IAM role attached to EC2 instances to allow them to join cluster and access AWS
+  amiSelectorTerms:
+    - alias: al2023@latest
+  amiFamily: AL2023
+  role: "bankapp-prod-karpenter-node-role"
   subnetSelectorTerms:
-  #These selectors are used to automatically choose the correct subnets and security groups for EC2 nodes based on tags, instead of hardcoding AWS IDs
     - tags:
-        karpenter.sh/discovery: "bankapp-prod"  # you already created subnet and sg via terraform and tagged them with karpenter.sh/discovery=bankapp-prod, so karpenter will automatically find and use those resources when provisioning nodes
+        karpenter.sh/discovery: bankapp-prod
   securityGroupSelectorTerms:
     - tags:
-        karpenter.sh/discovery: "bankapp-prod"  # Selects security groups automatically based on this tag for node networking
+        karpenter.sh/discovery: bankapp-prod
   tags:
-    Intent: "karpenter-managed-nodes"  # Tag to identify nodes managed by Karpenter
-    Project: "zero-downtime-platform"  # Tag used for cost tracking and resource organization
+    Name: karpenter-node
+    Project: Banking-System

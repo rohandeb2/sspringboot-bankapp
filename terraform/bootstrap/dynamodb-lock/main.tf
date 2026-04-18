@@ -15,7 +15,7 @@ resource "aws_dynamodb_table" "terraform_locks" {
   }
 
   # Prevent accidental deletion of the lock table
-  deletion_protection_enabled = var.environment == "prod" ? true : false
+  # deletion_protection_enabled = var.environment == "prod" ? true : false
 
   # TTL (Time to Live) is not needed for state locks, 
   # but point-in-time recovery is a "Senior" safety move.

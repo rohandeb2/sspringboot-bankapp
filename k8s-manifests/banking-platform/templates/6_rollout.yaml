@@ -1,47 +1,38 @@
-apiVersion: argoproj.io/v1alpha1 # Argo Rollouts CRD API version
-kind: Rollout # Defines a progressive delivery rollout resource (instead of Deployment)
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
-  name: {{ include "banking.fullname" . }} # Dynamically generates rollout name using Helm helper
-  namespace: {{ .Values.namespace }} # Deploys rollout into the specified namespace
+  name: {{ include "banking.fullname" . }}
+  namespace: {{ .Values.namespace }}
   labels:
-    {{- include "banking.labels" . | nindent 4 }} # Applies common labels using Helm helper
+    {{- include "banking.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount | default 1 }} # Ensures high availability with default 2 replicas
+  replicas: {{ .Values.replicaCount | default 1 }}
   selector:
     matchLabels:
-      app: {{ include "banking.fullname" . }} # Matches pods with this label for rollout control
-  
-  strategy:
-    blueGreen: # Uses Blue-Green deployment strategy for zero-downtime releases
-      activeService: {{ include "banking.fullname" . }}-active # All real users hit this service
-      previewService: {{ include "banking.fullname" . }}-preview # Users do NOT hit this (unless you expose it)
-      autoPromotionEnabled: false # Deployment will pause after new version is ready, waiting for manual promotion
-      prePromotionAnalysis:
-        templates:
-          - templateName: banking-success-rate-check
-        args:
-          - name: app-name
-            value: {{ include "banking.fullname" . }} # Passes app name as argument to the analysis template (used in Prometheus queries to filter metrics for this specific app) 
-      scaleDownDelaySeconds: 60 # After promotion: Old version is NOT killed immediately 👉 Waits 60 seconds
+      app: {{ include "banking.fullname" . }}
 
-  template: # Pod template defining the application workload
+  strategy:
+    blueGreen:
+      activeService: {{ include "banking.fullname" . }}-active
+      previewService: {{ include "banking.fullname" . }}-preview
+      autoPromotionEnabled: false
+      scaleDownDelaySeconds: 60
+
+  template:
     metadata:
       labels:
-        app: {{ include "banking.fullname" . }} # Labels applied to pods for selector matching
-      annotations:
-        proxy.istio.io/config: '{"holdApplicationUntilProxyStarts": true}' # Ensures Istio sidecar is ready before app starts (prevents traffic loss during startup)
+        app: {{ include "banking.fullname" . }}
     spec:
-      serviceAccountName: {{ include "banking.fullname" . }} # Associates pod with IAM-enabled ServiceAccount (IRSA)
+      serviceAccountName: {{ include "banking.fullname" . }}
       securityContext:
-        allowPrivilegeEscalation: false # Prevents privilege escalation for security hardening
-        runAsNonRoot: true # Enforces container to run as non-root user for security
-        runAsUser: 1000 # Specifies user ID inside container
-        fsGroup: 2000 # Ensures shared file system permissions across containers
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
         seccompProfile:
-          type: RuntimeDefault # Uses default seccomp profile for additional security
+          type: RuntimeDefault
       containers:
         - name: banking-api
-          securityContext:                    # ← ADD THIS (container-level)
+          securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
             runAsUser: 1000
@@ -50,138 +41,54 @@ spec:
             seccompProfile:
               type: RuntimeDefault
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }} # Controls when image is pulled
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - name: http # Named port for service reference
-              containerPort: {{ .Values.service.targetPort | default 8080 }} # Container listens on this port
-              protocol: TCP # Uses TCP protocol
-          
+            - name: http
+              containerPort: {{ .Values.service.targetPort | default 8080 }}
+              protocol: TCP
           env:
-              #This identifies the  service in dashboards
-            - name: OTEL_SERVICE_NAME # Identifies service in observability backend
-              value: "banking-core-service" # Logical service name for tracing/monitoring
-            
-              #Send all telemetry to the OpenTelemetry Collector
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT # Endpoint of OpenTelemetry collector
-              value: "http://otel-collector.monitoring.svc.cluster.local:4317" # gRPC endpoint inside cluster
-            
-              #Adds metadata to every trace/log so it can be easily filtered and analyzed in Grafana/Tempo
-            - name: OTEL_RESOURCE_ATTRIBUTES # Adds metadata tags to telemetry data
-              value: "service.namespace=banking,env=prod,pod.name=$(K8S_POD_NAME)" # Enriches traces/logs with context
-            
-              #Disables metrics export from OTEL because Prometheus is scraping metrics directly from the app
-            - name: OTEL_METRICS_EXPORTER # Controls metrics exporter
-              value: "none" # Disabled since Prometheus handles metrics
-            
-              #Enables distributed tracing
-            - name: OTEL_TRACES_EXPORTER # Controls trace exporter
-              value: "otlp" # Sends traces to OpenTelemetry collector
-            
-              #Sends logs via OpenTelemetry✔ Why? Centralized logging Correlate logs with traces
-            - name: OTEL_LOGS_EXPORTER # Controls logs exporter
-              value: "otlp" # Sends logs to OpenTelemetry collector
-
-            #uses k8s downward API to inject The current pod’s name into an environment variable In Kubernetes:  Pods are dynamic Names change on every deployment
-            - name: K8S_POD_NAME # Injects pod name dynamically
+            - name: OTEL_SERVICE_NAME
+              value: "banking-core-service"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.monitoring.svc.cluster.local:4317"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "service.namespace=banking,env=prod,pod.name=$(K8S_POD_NAME)"
+            - name: OTEL_METRICS_EXPORTER
+              value: "none"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+            - name: OTEL_LOGS_EXPORTER
+              value: "otlp"
+            - name: K8S_POD_NAME
               valueFrom:
                 fieldRef:
-                  fieldPath: metadata.name # Uses Kubernetes Downward API to fetch pod name
-
-            # attach a java agent for distributed tracing and metrics collection (OpenTelemetry Java agent)
-            - name: JAVA_TOOL_OPTIONS # JVM options for instrumentation
-              value: "-javaagent:/app/opentelemetry-javaagent.jar" # Attaches OpenTelemetry Java agent
-
+                  fieldPath: metadata.name
+            - name: JAVA_TOOL_OPTIONS
+              value: "-javaagent:/app/opentelemetry-javaagent.jar"
           envFrom:
             - configMapRef:
-                name: {{ include "banking.fullname" . }}-config # Loads environment variables from ConfigMap
+                name: {{ include "banking.fullname" . }}-config
             - secretRef:
-                name: {{ include "banking.fullname" . }}-db-secrets # Loads sensitive data from Kubernetes Secret
-
+                name: {{ include "banking.fullname" . }}-db-secrets
           resources:
-            {{- toYaml .Values.resources | nindent 12 }} # Applies CPU/memory resource requests and limits
-          
-          # Probes to monitor container health and ensure reliability
+            {{- toYaml .Values.resources | nindent 12 }}
           startupProbe:
             httpGet:
-              path: /actuator/health/liveness # Endpoint checked during container startup
-              port: http # Uses named port
-            failureThreshold: 30 # Allows long startup time before marking failure
-            periodSeconds: 10 # Probe interval during startup
-          
+              path: /actuator/health/liveness
+              port: http
+            failureThreshold: 30
+            periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /actuator/health/liveness # Checks if app is alive
-              port: http # Uses named port
-            periodSeconds: 20 # Probe interval
-          
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 20
           readinessProbe:
             httpGet:
-              path: /actuator/health/readiness # Checks if app is ready to receive traffic
-              port: http # Uses named port
-            periodSeconds: 10 # Probe interval
-
-          # Graceful shutdown to prevent traffic loss during rollout promotion
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 10
           lifecycle:
             preStop:
               exec:
-                command: ["/bin/sh", "-c", "sleep 20"] # Graceful shutdown delay to allow traffic drain
-
-
-# how blue green deployment works in Argo Rollouts:
-# 1. The "Stable" State (Version 1)
-# When you first push your code:
-
-# Rollout creates 100% of the pods using Image V1.
-
-# Active Service points to these V1 pods.
-
-# User Traffic: Users hit the active-service and see your banking app.
-
-# 2. The "New Image" Push (Version 2)
-# You update your values.yaml with a new Docker image tag and push to Git.
-
-# ArgoCD syncs the change.
-
-# Rollout sees the new image and starts a new "Preview" ReplicaSet with Image V2.
-
-# The Split: * Active Service stays on V1 (Real users are safe).
-
-# Preview Service switches to V2.
-
-# 3. The "Analysis" Phase (The Interview)
-# Your prePromotionAnalysis kicks in.
-
-# Argo creates an AnalysisRun.
-
-# It queries Prometheus specifically for metrics coming from the pods attached to the Preview Service.
-
-# Logic: "Is the error rate on the Preview pods less than 1%?"
-
-# 4. The "Promotion" (The Traffic Flip)
-# Once the Analysis Template returns Successful:
-
-# Traffic Switch: Argo Rollouts instantly changes the selector of the Active Service to point to the V2 pods.
-
-# Result: Real users are now hitting Version 2.
-
-# Temporary Hold: Version 1 pods stay alive for scaleDownDelaySeconds: 60 just in case you need to do an emergency manual rollback.
-
-# 5. The "Cleanup"
-# After 60 seconds, Version 1 pods are deleted.
-
-# Version 2 is now officially the "Stable/Active" version.
-
-# The cycle resets. The next time you push an image, the new one will start as "Preview" again.
-
-# 🛠️ How to verify this "Flip" manually
-# If you want to see this happen while you are practicing, run this command in your terminal:
-
-# Bash
-# kubectl argo rollouts get rollout test-release-banking-platform -n banking-prod --watch
-# What you will see visually:
-
-# A new revision appears.
-
-# A step appears called pre-promotion analysis.
-
-# Once it turns green, you will see the active checkmark move from the old revision to the new one.
+                command: ["/bin/sh", "-c", "sleep 20"]

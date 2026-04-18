@@ -1,37 +1,25 @@
-# This file controls HOW traffic behaves AFTER it reaches your service
-# DestinationRule → decides HOW to send traffic: tls or load balancing or retries or circuit breaking
-
-apiVersion: networking.istio.io/v1alpha3 # Istio networking API
-kind: DestinationRule # Defines traffic policies for a service inside Istio
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
 metadata:
-  name: {{ include "banking.fullname" . }}-dr # Name of the DestinationRule
-  namespace: {{ .Values.namespace }} # Namespace where it is applied
+  name: {{ include "banking.fullname" . }}-dr
+  namespace: {{ .Values.namespace }}
 spec:
-  host: {{ include "banking.fullname" . }}-active # Applies these policies to the ACTIVE service (stable version)
-
+  host: {{ include "banking.fullname" . }}-active
   trafficPolicy:
     tls:
-      mode: ISTIO_MUTUAL # Use automatic secure communication between services
-
+      mode: ISTIO_MUTUAL
     loadBalancer:
-      simple: LEAST_CONN # Send request to the pod which has the least active connections
-
-    outlierDetection: # Automatically detect and temporarily remove unhealthy pods from load balancing
-      consecutive5xxErrors: 3 # If a pod returns 5xx errors 3 times
-      interval: 10s # Check every 10 seconds
-      baseEjectionTime: 30s # Remove that pod from load balancing for 30 seconds
-      maxEjectionPercent: 100 # Allows ejecting all unhealthy pods if needed
-
-    connectionPool: # Control connection settings to prevent overload and improve performance
+      simple: LEAST_CONN
+    outlierDetection:
+      consecutive5xxErrors: 3
+      interval: 10s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 100
+    connectionPool:
       tcp:
-        maxConnections: 100 # Max TCP connections to a pod
+        maxConnections: 100
       http:
-        http1MaxPendingRequests: 10 # Limits queued requests (prevents overload)
-        maxRequestsPerConnection: 10 # Reuse connections but limit requests per connection
-
-# VirtualService
-# 👉 WHERE to send traffic
-# 🔹 DestinationRule
-# 👉 HOW to send traffic
-# 🔹 Kubernetes Service
-# 👉 Which pods receive traffic (based on labels & health)
+        http1MaxPendingRequests: 10
+        maxRequestsPerConnection: 10
+{{- end }}

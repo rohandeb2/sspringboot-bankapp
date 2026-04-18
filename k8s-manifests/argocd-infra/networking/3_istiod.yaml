@@ -7,7 +7,7 @@ apiVersion: argoproj.io/v1alpha1  # ArgoCD Application API version
 kind: Application  # Declares this as an ArgoCD Application (used to deploy resources)
 metadata:
   name: istiod  # Name of the control plane component of Istio (Istiod)
-  namespace: istio-system  # Namespace where this Application object is stored
+  namespace: argocd  # Namespace where this Application object is stored
   finalizers:
     - resources-finalizer.argocd.argoproj.io  # Ensures all resources are deleted when this app is removed
 spec:

@@ -1,36 +1,32 @@
-# This file controls HOW traffic is routed inside Istio after entering through the Gateway
-# VirtualService → decides WHERE to send traffic
-
-apiVersion: networking.istio.io/v1alpha3 # Istio networking API
-kind: VirtualService # Defines how traffic is routed inside Istio mesh
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
 metadata:
-  name: {{ include "banking.fullname" . }}-vs # Name of the VirtualService
-  namespace: {{ .Values.namespace }} # Namespace where it is deployed
+  name: {{ include "banking.fullname" . }}-vs
+  namespace: {{ .Values.namespace }}
 spec:
   hosts:
-  - "api.rohandevops.co.in" # Only apply this rule if the request is for this domain
+  - "{{ .Values.istio.host }}"
   gateways:
-  - {{ include "banking.fullname" . }}-gateway # Only apply this rule if traffic is coming via this Gateway
-  http:   #When a request comes, send it to this service
-  - name: "banking-api-routes" # Logical name for this routing rule
+  - {{ include "banking.fullname" . }}-gateway
+  http:
+  - name: "banking-api-routes"
     route:
     - destination:
-        host: {{ include "banking.fullname" . }}-active # Routes traffic to ACTIVE service (stable version from Argo Rollouts)
+        host: {{ include "banking.fullname" . }}-active
         port:
-          number: 80 # Port on which the service is listenings
-    
+          number: 80
     retries:
-      attempts: 3 # Retry failed requests up to 3 times
-      perTryTimeout: 2s # Each retry waits max 2 seconds
-      retryOn: gateway-error,connect-failure,refused-stream # Conditions under which retry happens
-    
-    timeout: 10s # Total request timeout (after this request fails)
-    
-    corsPolicy: # CORS settings to allow frontend to call this API from a different domain
+      attempts: 3
+      perTryTimeout: 2s
+      retryOn: gateway-error,connect-failure,refused-stream
+    timeout: 10s
+    corsPolicy:
       allowOrigins:
-        - exact: "https://rohandevops.co.in" # Allows frontend domain to call this API
+        - exact: "https://rohandevops.co.in"
       allowMethods:
-        - POST # Allowed HTTP methods
+        - POST
         - GET
       allowHeaders:
-        - content-type # Allowed headers in requests
+        - content-type
+{{- end }}
