@@ -34,6 +34,17 @@ spec:
         - resources:
             kinds:
             - Pod  # Applies to all Pods
+      exclude:
+        any:
+        - resources:
+            namespaces:
+            - monitoring
+            - velero
+            - kyverno
+            - kube-system
+            - argocd
+            - jenkins
+            - istio-system
       validate:
         message: "Running as root is forbidden in the Banking Cluster."  # Error message if rule fails
         pattern:
