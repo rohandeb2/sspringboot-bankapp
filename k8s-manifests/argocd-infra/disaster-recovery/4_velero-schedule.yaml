@@ -1,39 +1,17 @@
-#this file is created to define a recurring backup schedule in Velero that automatically backs up the banking-prod namespace every 6 hours, with a retention period of 30 days. It also includes hooks to ensure database consistency by locking tables during backup and unlocking them afterward. This ensures that we have regular, consistent backups of our production environment for disaster recovery purposes.
-
-apiVersion: velero.io/v1  # API version for Velero resources
-kind: Schedule  # Defines a recurring backup schedule in Velero
+apiVersion: velero.io/v1
+kind: Schedule
 metadata:
-  name: banking-prod-daily-backup  # Name of the scheduled backup job
-  namespace: velero  # Namespace where Velero is installed
+  name: banking-prod-daily-backup
+  namespace: velero
   labels:
-    component: disaster-recovery  # Indicates this resource is part of DR setup
-    env: production  # Marks this schedule for production environment
-    backup-group: fintech-core  # Logical grouping label for related backups
+    component: disaster-recovery
+    env: production
+    backup-group: fintech-core
 spec:
-  schedule: "0 */6 * * *"  # Cron schedule to run backup every 6 hours (4 times daily)
-  storageLocation: default
-  template:  # Template that defines what and how to back up
+  schedule: "0 */6 * * *"
+  template:
     includedNamespaces:
-      - banking-prod  # Only backs up resources from the banking-prod namespace
-    
-    ttl: 720h0m0s  # Time-to-live for backups (30 days retention before deletion)
-    
-    snapshotVolumes: true  # Enables volume snapshots (e.g., EBS) for persistent data
-  
-    # it won't work with RDS because RDS is a managed service and Velero cannot directly interact with it to perform snapshots or backups. 
-    # Velero is designed to back up Kubernetes resources and volumes, but it does not have the capability to back up external managed services like RDS. 
-    # For RDS backups, you would typically use AWS's native backup solutions or other database backup tools that are compatible with RDS.
-    
-    # hooks:   # Hooks to run custom commands before and after backup for ensuring DB consistency
-    #   resources:
-    #     - name: banking-db-pause  # Name of hook resource used for DB consistency
-    #       includedNamespaces:
-    #         - banking-prod  # Apply hook only to banking-prod namespace
-    #       pre:
-    #         - exec:
-    #             container: mysql  # Run command inside mysql container
-    #             command: ["/bin/sh", "-c", "mysqladmin flush-tables --lock-all-tables"]  # Lock DB tables before backup to ensure consistency
-    #       post:
-    #         - exec:
-    #             container: mysql  # Run command inside mysql container
-    #             command: ["/bin/sh", "-c", "mysqladmin flush-tables --unlock-all-tables"]  # Unlock DB tables after backup is complete
+      - banking-prod
+    ttl: 720h0m0s
+    snapshotVolumes: false
+    storageLocation: default
