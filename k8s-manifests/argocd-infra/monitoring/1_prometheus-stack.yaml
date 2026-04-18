@@ -99,4 +99,5 @@ spec:
       selfHeal: true  # Auto-correct drift from desired state
 
     syncOptions:
-      - CreateNamespace=true  # Automatically create namespace if not exists
+      - CreateNamespace=true
+      - ServerSideApply=true  # Automatically create namespace if not exists
