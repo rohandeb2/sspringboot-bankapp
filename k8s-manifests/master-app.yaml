@@ -1,39 +1,363 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
   name: root-banking-stack
   namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
 spec:
+  destination:
+    namespace: argocd
+    server: https://kubernetes.default.svc
+  ignoreDifferences:
+  - group: external-secrets.io
+    jsonPointers:
+    - /spec/data
+    - /spec/target
+    kind: ExternalSecret
+  - group: kyverno.io
+    jsonPointers:
+    - /spec/rules
+    kind: ClusterPolicy
   project: default
   source:
-    repoURL: 'https://github.com/rohandeb2/sspringboot-bankapp'
-    targetRevision: HEAD
-    path: k8s-manifests/argocd-infra
     directory:
+      jsonnet: {}
       recurse: true
-  destination:
-    server: 'https://kubernetes.default.svc'
-    namespace: argocd
-  ignoreDifferences:
-    - group: external-secrets.io
-      kind: ExternalSecret
-      jsonPointers:
-        - /metadata/resourceVersion
-        - /metadata/generation
-    - group: kyverno.io
-      kind: ClusterPolicy
-      jsonPointers:
-        - /metadata/resourceVersion
-        - /metadata/generation
-        - /spec/rules
+    path: k8s-manifests/argocd-infra
+    repoURL: https://github.com/rohandeb2/sspringboot-bankapp
+    targetRevision: HEAD
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=true
-      - ApplyOutOfSyncOnly=true
-      - ServerSideApply=true
-      - RespectIgnoreDifferences=true
+    - CreateNamespace=true
+    - ApplyOutOfSyncOnly=true
+    - ServerSideApply=true
+    - RespectIgnoreDifferences=true
+  conditions:
+  - lastTransitionTime: "2026-04-18T17:16:26Z"
+    message: ServiceAccount/tempo-sa is part of applications argocd/root-banking-stack
+      and tempo-stack
+    type: SharedResourceWarning
+  controllerNamespace: argocd
+  health:
+    lastTransitionTime: "2026-04-18T16:17:18Z"
+  history:
+  - deployStartedAt: "2026-04-18T17:03:25Z"
+    deployedAt: "2026-04-18T17:03:26Z"
+    id: 0
+    initiatedBy: {}
+    revision: 86e28f5e4d2a8b75a865f3a39a0d929b18a76140
+    source:
+      directory:
+        jsonnet: {}
+        recurse: true
+      path: k8s-manifests/argocd-infra
+      repoURL: https://github.com/rohandeb2/sspringboot-bankapp
+      targetRevision: HEAD
+  - deployStartedAt: "2026-04-18T17:05:11Z"
+    deployedAt: "2026-04-18T17:05:12Z"
+    id: 1
+    initiatedBy: {}
+    revision: 86e28f5e4d2a8b75a865f3a39a0d929b18a76140
+    source:
+      directory:
+        jsonnet: {}
+        recurse: true
+      path: k8s-manifests/argocd-infra
+      repoURL: https://github.com/rohandeb2/sspringboot-bankapp
+      targetRevision: HEAD
+  - deployStartedAt: "2026-04-18T17:12:31Z"
+    deployedAt: "2026-04-18T17:12:32Z"
+    id: 2
+    initiatedBy:
+      automated: true
+    revision: 90b6dfbb2123b31703fe405f7320f764ddd6979b
+    source:
+      directory:
+        jsonnet: {}
+        recurse: true
+      path: k8s-manifests/argocd-infra
+      repoURL: https://github.com/rohandeb2/sspringboot-bankapp
+      targetRevision: HEAD
+  operationState:
+    finishedAt: "2026-04-18T17:13:52Z"
+    message: successfully synced (all tasks run)
+    operation:
+      initiatedBy:
+        automated: true
+      retry:
+        limit: 5
+      sync:
+        autoHealAttemptsCount: 5
+        prune: true
+        resources:
+        - group: external-secrets.io
+          kind: ExternalSecret
+          name: banking-repo-creds
+        - group: external-secrets.io
+          kind: ExternalSecret
+          name: jenkins-github-oauth
+        - group: kyverno.io
+          kind: ClusterPolicy
+          name: banking-guardrails
+        revision: 90b6dfbb2123b31703fe405f7320f764ddd6979b
+        source:
+          directory:
+            jsonnet: {}
+            recurse: true
+          path: k8s-manifests/argocd-infra
+          repoURL: https://github.com/rohandeb2/sspringboot-bankapp
+          targetRevision: HEAD
+        syncOptions:
+        - CreateNamespace=true
+        - ApplyOutOfSyncOnly=true
+        - ServerSideApply=true
+    phase: Succeeded
+    startedAt: "2026-04-18T17:13:52Z"
+    syncResult:
+      resources:
+      - group: kyverno.io
+        hookPhase: Running
+        kind: ClusterPolicy
+        message: clusterpolicy.kyverno.io/banking-guardrails serverside-applied
+        name: banking-guardrails
+        namespace: argocd
+        syncPhase: Sync
+        version: v1
+      - group: external-secrets.io
+        hookPhase: Running
+        kind: ExternalSecret
+        message: externalsecret.external-secrets.io/jenkins-github-oauth serverside-applied
+        name: jenkins-github-oauth
+        namespace: jenkins
+        syncPhase: Sync
+        version: v1
+      - group: external-secrets.io
+        hookPhase: Running
+        kind: ExternalSecret
+        message: externalsecret.external-secrets.io/banking-repo-creds serverside-applied
+        name: banking-repo-creds
+        namespace: argocd
+        syncPhase: Sync
+        version: v1
+      revision: 90b6dfbb2123b31703fe405f7320f764ddd6979b
+      source:
+        directory:
+          jsonnet: {}
+          recurse: true
+        path: k8s-manifests/argocd-infra
+        repoURL: https://github.com/rohandeb2/sspringboot-bankapp
+        targetRevision: HEAD
+  reconciledAt: "2026-04-18T17:16:29Z"
+  resourceHealthSource: appTree
+  resources:
+  - kind: ConfigMap
+    name: loki-datasource
+    namespace: monitoring
+    version: v1
+  - kind: ConfigMap
+    name: springboot-banking-dashboard
+    namespace: monitoring
+    version: v1
+  - kind: ConfigMap
+    name: tempo-datasource
+    namespace: monitoring
+    version: v1
+  - kind: Namespace
+    name: velero
+    version: v1
+  - kind: PersistentVolumeClaim
+    name: jenkins-pvc
+    namespace: jenkins
+    version: v1
+  - kind: ResourceQuota
+    name: velero-resource-quota
+    namespace: velero
+    version: v1
+  - kind: ServiceAccount
+    name: jenkins-agent-sa
+    namespace: jenkins
+    version: v1
+  - kind: ServiceAccount
+    name: loki-sa
+    namespace: monitoring
+    version: v1
+  - kind: ServiceAccount
+    name: tempo-sa
+    namespace: monitoring
+    version: v1
+  - group: argoproj.io
+    kind: AnalysisTemplate
+    name: banking-success-rate-check
+    namespace: banking-prod
+    version: v1alpha1
+  - group: argoproj.io
+    kind: AppProject
+    name: banking-core-project
+    namespace: argocd
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Application
+    name: istio-base
+    namespace: argocd
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Application
+    name: istio-ingressgateway
+    namespace: argocd
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Application
+    name: istiod
+    namespace: argocd
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Application
+    name: jenkins-stack
+    namespace: argocd
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Application
+    name: karpenter
+    namespace: argocd
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Application
+    name: kube-prometheus-stack
+    namespace: argocd
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Application
+    name: kyverno
+    namespace: argocd
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Application
+    name: loki-stack
+    namespace: argocd
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Application
+    name: minio
+    namespace: argocd
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Application
+    name: otel-collector
+    namespace: argocd
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Application
+    name: sonarqube
+    namespace: argocd
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Application
+    name: tempo-stack
+    namespace: argocd
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Application
+    name: velero
+    namespace: argocd
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Application
+    name: kiali-server
+    namespace: istio-system
+    version: v1alpha1
+  - group: argoproj.io
+    kind: ApplicationSet
+    name: banking-stack-set
+    namespace: argocd
+    version: v1alpha1
+  - group: external-secrets.io
+    kind: ExternalSecret
+    name: banking-repo-creds
+    namespace: argocd
+    version: v1
+  - group: external-secrets.io
+    kind: ExternalSecret
+    name: jenkins-github-oauth
+    namespace: jenkins
+    version: v1
+  - group: karpenter.k8s.aws
+    kind: EC2NodeClass
+    name: default
+    version: v1
+  - group: karpenter.sh
+    kind: NodePool
+    name: default
+    version: v1
+  - group: kyverno.io
+    kind: ClusterPolicy
+    name: banking-guardrails
+    version: v1
+  - group: monitoring.coreos.com
+    kind: PrometheusRule
+    name: banking-app-alerts
+    namespace: monitoring
+    version: v1
+  - group: monitoring.coreos.com
+    kind: PrometheusRule
+    name: log-anomaly-alerts
+    namespace: monitoring
+    version: v1
+  - group: networking.k8s.io
+    kind: Ingress
+    name: grafana-ingress
+    namespace: monitoring
+    version: v1
+  - group: networking.k8s.io
+    kind: NetworkPolicy
+    name: jenkins-agent-isolation
+    namespace: jenkins
+    version: v1
+  - group: networking.k8s.io
+    kind: NetworkPolicy
+    name: allow-velero-internal
+    namespace: velero
+    version: v1
+  - group: security.istio.io
+    kind: PeerAuthentication
+    name: default
+    namespace: istio-system
+    version: v1
+  - group: velero.io
+    kind: Schedule
+    name: banking-prod-daily-backup
+    namespace: velero
+    version: v1
+  sourceHydrator: {}
+  sourceType: Directory
+  summary:
+    externalURLs:
+    - http://grafana.rohandevops.co.in/
+  sync:
+    comparedTo:
+      destination:
+        namespace: argocd
+        server: https://kubernetes.default.svc
+      ignoreDifferences:
+      - group: external-secrets.io
+        jsonPointers:
+        - /spec/data
+        - /spec/target
+        kind: ExternalSecret
+      - group: kyverno.io
+        jsonPointers:
+        - /spec/rules
+        kind: ClusterPolicy
+      source:
+        directory:
+          jsonnet: {}
+          recurse: true
+        path: k8s-manifests/argocd-infra
+        repoURL: https://github.com/rohandeb2/sspringboot-bankapp
+        targetRevision: HEAD
+    revision: 90b6dfbb2123b31703fe405f7320f764ddd6979b
