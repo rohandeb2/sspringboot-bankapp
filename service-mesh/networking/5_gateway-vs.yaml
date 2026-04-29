@@ -1,0 +1,34 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: banking-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "api.rohandevops.co.in"
+    - "rohandevops.co.in"
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: banking-vs
+  namespace: banking-prod
+spec:
+  hosts:
+  - "api.rohandevops.co.in"
+  - "rohandevops.co.in"
+  gateways:
+  - istio-system/banking-gateway
+  http:
+  - route:
+    - destination:
+        host: bankapp-banking-platform-active.banking-prod.svc.cluster.local
+        port:
+          number: 80

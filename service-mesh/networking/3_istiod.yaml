@@ -1,55 +1,46 @@
-# This file deploys Istiod, which is the control plane (brain) of Istio
-# istio-base → foundation (CRDs)
-# istio-ingressgateway → entry point for traffic
-# istiod → brain that manages the whole service mesh
-
-apiVersion: argoproj.io/v1alpha1  # ArgoCD Application API version
-kind: Application  # Declares this as an ArgoCD Application (used to deploy resources)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
 metadata:
-  name: istiod  # Name of the control plane component of Istio (Istiod)
-  namespace: argocd  # Namespace where this Application object is stored
+  name: istiod
+  namespace: argocd
   finalizers:
-    - resources-finalizer.argocd.argoproj.io  # Ensures all resources are deleted when this app is removed
+    - resources-finalizer.argocd.argoproj.io
 spec:
-  project: default  # ArgoCD project controlling permissions and policies
+  project: default
   source:
-    repoURL: https://istio-release.storage.googleapis.com/charts  # tell argocd where to fetch the Helm chart from (Istio's official Helm repo)
-    chart: istiod  # tell which component to install (Istiod is the control plane of Istio)
-    targetRevision: 1.22.0  # Specific version for stability and consistency
-    helm:        
-      values: |  # Custom Helm values to configure Istiod
-        global:          # Global settings that apply to the entire mesh
-          meshID: mesh1  # unique identity of  service mesh
-          multiCluster:  # Enables multi-cluster support (if you have multiple clusters, this allows them to work together)
-            clusterName: banking-prod-eks  # Name of the Kubernetes cluster used when we have multiple clusters in the same mesh
-        
-        pilot:           # pilot is like the driver which runs the control plane logic in Istiod
-          autoscaleEnabled: true  # Enables automatic scaling of Istiod
-          autoscaleMin: 2  # Minimum number of Istiod pods
-          autoscaleMax: 5  # Maximum number of Istiod pods
-
-          # Resource requests are mandatory for production stability
+    repoURL: https://istio-release.storage.googleapis.com/charts
+    chart: istiod
+    targetRevision: 1.22.0
+    helm:
+      values: |
+        global:
+          meshID: mesh1
+          multiCluster:
+            clusterName: banking-prod-eks
+        pilot:
+          autoscaleEnabled: true
+          autoscaleMin: 2
+          autoscaleMax: 5
           resources:
             requests:
-              cpu: 500m  # Minimum CPU required per pod
-              memory: 2Gi  # Minimum memory required per pod
+              cpu: 500m
+              memory: 2Gi
             limits:
-              cpu: 1000m  # Maximum CPU allowed per pod
-              memory: 4Gi  # Maximum memory allowed per pod
-
-        meshConfig:                   # Mesh-wide configuration settings for Istio
-          accessLogFile: /dev/stdout  # Logs all traffic for debugging/auditing
-          enableTracing: true         # Enables distributed tracing
+              cpu: 1000m
+              memory: 4Gi
+        meshConfig:
+          accessLogFile: /dev/stdout
+          enableTracing: true
           defaultConfig:
             tracing:
-              sampling: 100            # 100% of requests are traced (full tracing)
-              max_path_tag_length: 256  # Maximum length of trace path tags
+              sampling: 100
+              max_path_tag_length: 256
   destination:
-    server: https://kubernetes.default.svc  # Deploys inside the same Kubernetes cluster
-    namespace: istio-system  # Namespace where Istiod (control plane) will run
+    server: https://kubernetes.default.svc
+    namespace: istio-system
   syncPolicy:
     automated:
-      prune: true  # Deletes resources removed from Git
-      selfHeal: true  # Fixes drift automatically to match Git
+      prune: true
+      selfHeal: true
     syncOptions:
-      - CreateNamespace=true  # Automatically creates the namespace if it doesn't exist
+      - CreateNamespace=true

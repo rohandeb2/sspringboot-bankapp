@@ -1,27 +1,22 @@
-# We create this file to let ArgoCD automatically install and manage the Istio base in a GitOps way, so the cluster stays in sync 
-# with Git, stable, version-controlled, and self-healing without manual intervention.
-
-# It installs the base (CRDs + core configs), which is the foundation required before installing the rest of Istio (like control plane and gateways).
-
-apiVersion: argoproj.io/v1alpha1  # API version for ArgoCD Application resource (defines which CRD is used)
-kind: Application  # Declares this as an ArgoCD Application (used to manage deployment of apps)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
 metadata:
-  name: istio-base  # Name of this ArgoCD application (unique identifier in ArgoCD)
-  namespace: argocd  # Namespace where ArgoCD stores this Application object (not where app runs)
+  name: istio-base
+  namespace: argocd
   finalizers:
-    - resources-finalizer.argocd.argoproj.io  # Ensures all resources are deleted when this app is deleted (clean cleanup)
+    - resources-finalizer.argocd.argoproj.io
 spec:
-  project: default  # ArgoCD project this application belongs to (controls permissions and policies)
+  project: default
   source:
-    repoURL: https://istio-release.storage.googleapis.com/charts  # tell argocd where to fetch the Helm chart from (Istio's official Helm repo)
-    chart: base  # tell which component to install (Istio base chart contains CRDs and core configs)
-    targetRevision: 1.22.0 # Specific chart version (pins version to avoid unexpected changes in production)
+    repoURL: https://istio-release.storage.googleapis.com/charts
+    chart: base
+    targetRevision: 1.22.0
   destination:
-    server: https://kubernetes.default.svc  # Kubernetes API server (in-cluster cluster where this app will be deployed)
-    namespace: istio-system  # Target namespace where Istio base components will be installed
+    server: https://kubernetes.default.svc
+    namespace: istio-system
   syncPolicy:
     automated:
-      prune: true  # Automatically delete resources if they are removed from Git (keeps cluster clean)
-      selfHeal: true  # Automatically revert manual changes in cluster to match Git (ensures consistency)
+      prune: true
+      selfHeal: true
     syncOptions:
-      - CreateNamespace=true  # Automatically create the namespace if it does not exist
+      - CreateNamespace=true

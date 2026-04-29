@@ -1,14 +1,8 @@
-#This is an Istio security policy that enforces mTLS (Mutual Transport Layer Security) inside your cluster.
-# mtls is a security mechanism that encrypts traffic between services and ensures that only authenticated services can communicate with each other.
-
-
-apiVersion: security.istio.io/v1  # Istio security API version for authentication policies
-kind: PeerAuthentication  # Resource used to enforce how services authenticate each other (mTLS)
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
 metadata:
-  name: default  # Name of the policy (default applies broadly within the namespace)
-  namespace: istio-system  # Namespace where this policy is applied (controls Istio system components)
+  name: default
+  namespace: istio-system
 spec:
   mtls:
-    # 'STRICT' mode means pods will REJECT any connection that isn't mTLS.
-    # This prevents "Man-in-the-Middle" attacks inside your AWS VPC.
-    mode: STRICT  # Enforces mutual TLS (mTLS) for all traffic; only encrypted + authenticated communication is allowed
+    mode: STRICT
