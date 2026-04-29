@@ -76,7 +76,7 @@ istio:
 
 # VPA - disabled until Layer 14
 vpa:
-  enabled: false
+  enabled: true
 
 # Observability
 observability:

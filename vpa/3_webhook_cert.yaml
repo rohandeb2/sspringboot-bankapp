@@ -5,9 +5,9 @@ metadata:
   name: vpa-webhook-tls
   namespace: kube-system
 spec:
-  secretName: vpa-tls-certs      # This is exactly what VPA admission controller expects
-  duration: 8760h                # 1 year
-  renewBefore: 720h              # Renew 30 days before expiry — automatic, no manual work
+  secretName: vpa-tls-certs
+  duration: 8760h
+  renewBefore: 720h
   commonName: vpa-webhook.kube-system.svc
   dnsNames:
     - vpa-webhook.kube-system.svc
@@ -15,12 +15,13 @@ spec:
   privateKey:
     algorithm: RSA
     size: 2048
-    rotationPolicy: Always       # Rotate key on every renewal
+    rotationPolicy: Always
   issuerRef:
     name: vpa-ca-issuer
     kind: Issuer
     group: cert-manager.io
-  secretTemplate:
-    # VPA expects specific key names inside the secret
-    annotations:
-      cert-manager.io/allow-direct-injection: "true"
+  # usages required for a TLS server cert
+  usages:
+    - server auth
+    - digital signature
+    - key encipherment

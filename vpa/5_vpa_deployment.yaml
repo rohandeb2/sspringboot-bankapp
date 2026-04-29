@@ -1,3 +1,4 @@
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,16 +21,10 @@ spec:
       containers:
         - name: recommender
           image: registry.k8s.io/autoscaling/vpa-recommender:1.6.0
-          args:
-            - --v=4
-            - --stderrthreshold=info
+          args: [--v=4, --stderrthreshold=info]
           resources:
-            requests:
-              cpu: 50m
-              memory: 200Mi
-            limits:
-              cpu: 200m
-              memory: 500Mi
+            requests: {cpu: 50m, memory: 200Mi}
+            limits: {cpu: 200m, memory: 500Mi}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -53,16 +48,10 @@ spec:
       containers:
         - name: updater
           image: registry.k8s.io/autoscaling/vpa-updater:1.6.0
-          args:
-            - --v=4
-            - --stderrthreshold=info
+          args: [--v=4, --stderrthreshold=info]
           resources:
-            requests:
-              cpu: 50m
-              memory: 200Mi
-            limits:
-              cpu: 200m
-              memory: 500Mi
+            requests: {cpu: 50m, memory: 200Mi}
+            limits: {cpu: 200m, memory: 500Mi}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -89,7 +78,11 @@ spec:
           args:
             - --v=4
             - --stderrthreshold=info
-            - --reload-cert            # Watches for cert rotation and hot-reloads
+            - --reload-cert
+            - --register-webhook=false
+            - --tls-cert-file=/etc/tls-certs/tls.crt
+            - --tls-private-key=/etc/tls-certs/tls.key
+            - --client-ca-file=/etc/tls-certs/ca.crt
           ports:
             - name: https
               containerPort: 8000
@@ -100,29 +93,21 @@ spec:
               mountPath: /etc/tls-certs
               readOnly: true
           resources:
-            requests:
-              cpu: 50m
-              memory: 200Mi
-            limits:
-              cpu: 200m
-              memory: 500Mi
+            requests: {cpu: 50m, memory: 200Mi}
+            limits: {cpu: 200m, memory: 500Mi}
           livenessProbe:
-            httpGet:
-              path: /health-check
-              port: prometheus
+            httpGet: {path: /health-check, port: prometheus}
             initialDelaySeconds: 5
             periodSeconds: 10
           readinessProbe:
-            httpGet:
-              path: /health-check
-              port: prometheus
+            httpGet: {path: /health-check, port: prometheus}
             periodSeconds: 10
       volumes:
         - name: tls-certs
+          # Simple secret mount — no remapping needed when using explicit flags
           secret:
-            secretName: vpa-tls-certs   # cert-manager creates and rotates this
+            secretName: vpa-tls-certs
 ---
-# Service for the admission webhook
 apiVersion: v1
 kind: Service
 metadata:
