@@ -14,8 +14,6 @@ spec:
     hosts:
     - "api.rohandevops.co.in"
     - "rohandevops.co.in"
-    tls:
-      httpsRedirect: false   # keep false until TLS cert is ready
   - port:
       number: 443
       name: https
@@ -25,8 +23,51 @@ spec:
     - "rohandevops.co.in"
     tls:
       mode: SIMPLE
-      credentialName: banking-tls-cert   # cert-manager will create this secret
+      credentialName: banking-tls-cert
 ---
+# Routes ACME challenge for api.rohandevops.co.in
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: acme-challenge-api
+  namespace: istio-system
+spec:
+  hosts:
+  - "api.rohandevops.co.in"
+  gateways:
+  - istio-system/banking-gateway
+  http:
+  - match:
+    - uri:
+        prefix: "/.well-known/acme-challenge/"
+    route:
+    - destination:
+        host: cm-acme-http-solver-wsxjh.istio-system.svc.cluster.local
+        port:
+          number: 8089
+---
+# Routes ACME challenge for rohandevops.co.in
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: acme-challenge-root
+  namespace: istio-system
+spec:
+  hosts:
+  - "rohandevops.co.in"
+  gateways:
+  - istio-system/banking-gateway
+  http:
+  - match:
+    - uri:
+        prefix: "/.well-known/acme-challenge/"
+    route:
+    - destination:
+        host: cm-acme-http-solver-687hh.istio-system.svc.cluster.local
+        port:
+          number: 8089
+---
+# Main app - only after challenge routes above
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
