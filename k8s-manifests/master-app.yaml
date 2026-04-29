@@ -26,7 +26,7 @@ spec:
     directory:
       jsonnet: {}
       recurse: true
-    path: k8s-manifests/argocd-infra
+    path: .
     repoURL: https://github.com/rohandeb2/sspringboot-bankapp
     targetRevision: HEAD
   syncPolicy:

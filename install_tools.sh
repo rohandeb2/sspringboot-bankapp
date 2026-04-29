@@ -60,23 +60,42 @@ else
 fi
 
 # -------------------------------
-# Docker
+# Docker (FIXED)
 # -------------------------------
 if command -v docker &> /dev/null; then
     echo "✅ Docker already installed"
 else
     echo "🐳 Installing Docker..."
-    sudo apt update && \
-    sudo apt install -y ca-certificates curl gnupg && \
-    sudo install -m 0755 -d /etc/apt/keyrings && \
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
-    sudo chmod a+r /etc/apt/keyrings/docker.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null && \
-    sudo apt update && \
-    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && \
-    sudo usermod -aG docker $USER && \
-    newgrp docker && \
-    docker --version
+
+    sudo apt update
+    sudo apt install -y ca-certificates curl gnupg
+
+    sudo install -m 0755 -d /etc/apt/keyrings
+
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+    sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+    echo \
+    "deb [arch=$(dpkg --print-architecture) \
+    signed-by=/etc/apt/keyrings/docker.gpg] \
+    https://download.docker.com/linux/ubuntu \
+    $(. /etc/os-release && echo $VERSION_CODENAME) stable" | \
+    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    sudo apt update
+
+    sudo apt install -y docker-ce docker-ce-cli containerd.io \
+    docker-buildx-plugin docker-compose-plugin
+
+    # Add user to docker group
+    sudo usermod -aG docker $USER
+
+    echo "⚠️ Docker installed, but requires re-login to use without sudo"
+
+    # Safe verification
+    sudo docker --version
 fi
 
 # -------------------------------
@@ -159,4 +178,4 @@ done
 echo "--------------------------------"
 
 echo "🎉 Setup complete!"
-echo "⚠️ Run: newgrp docker"
+echo "⚠️ IMPORTANT: Run 'newgrp docker' OR logout/login to use Docker without sudo"

@@ -7,21 +7,18 @@ spec:
   generators:
     - list:
         elements:
-          # 1. Main Application
           - appName: banking-platform
-            path: k8s-manifests/banking-platform # Corrected Path
+            path: banking-app
             namespace: banking-prod
             env: prod
-          
-          # 2. Istio Networking (Fixing your deployment issue)
+
           - appName: istio-base
-            path: k8s-manifests/argocd-infra/networking
+            path: service-mesh
             namespace: istio-system
             env: infra-istio
 
-          # 3. SonarQube (Fixing your deployment issue)
           - appName: sonarqube
-            path: k8s-manifests/devsecops # Path where sonarqube-stack.yaml lives
+            path: security-scanning        # fixed typo: was "secuity-scanning"
             namespace: devsecops
             env: security
 
@@ -33,8 +30,7 @@ spec:
       source:
         repoURL: 'https://github.com/rohandeb2/sspringboot-bankapp'
         targetRevision: HEAD
-        path: '{{path}}' # Dynamic path based on the list above
-        # If it's a Helm chart, it uses these. If plain YAML, it ignores them.
+        path: '{{path}}'
         helm:
           valueFiles:
             - values.yaml

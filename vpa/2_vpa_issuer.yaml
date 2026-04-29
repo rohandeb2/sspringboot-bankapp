@@ -1,0 +1,38 @@
+# Step 1: Bootstrap issuer to create the CA cert itself
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: vpa-selfsigned-issuer
+  namespace: kube-system
+spec:
+  selfSigned: {}
+---
+# Step 2: The CA certificate (cert-manager generates key + cert automatically)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: vpa-ca
+  namespace: kube-system
+spec:
+  isCA: true
+  commonName: vpa-webhook-ca
+  secretName: vpa-ca-secret
+  duration: 87600h   # 10 years for the CA
+  renewBefore: 720h
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  issuerRef:
+    name: vpa-selfsigned-issuer
+    kind: Issuer
+    group: cert-manager.io
+---
+# Step 3: CA-backed issuer that signs the webhook cert
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: vpa-ca-issuer
+  namespace: kube-system
+spec:
+  ca:
+    secretName: vpa-ca-secret

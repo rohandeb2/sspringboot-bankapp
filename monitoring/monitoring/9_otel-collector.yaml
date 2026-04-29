@@ -3,26 +3,36 @@ kind: Application
 metadata:
   name: otel-collector
   namespace: argocd
+
 spec:
   project: default
+
   source:
     repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
     chart: opentelemetry-collector
     targetRevision: 0.110.0
+
     helm:
       values: |
         mode: deployment
+
         image:
           repository: otel/opentelemetry-collector-contrib
-          tag: "0.100.0"
+          tag: "0.110.0"   # ✅ aligned with chart version
+
         useGOMEMLIMIT: false
+
+        # ✅ Container-level security (NO fsGroup here)
         securityContext:
           runAsNonRoot: true
           runAsUser: 1000
-          fsGroup: 1000
+
+        # ✅ Pod-level security (fsGroup goes HERE)
         podSecurityContext:
           runAsNonRoot: true
           runAsUser: 1000
+          fsGroup: 1000
+
         config:
           receivers:
             otlp:
@@ -31,32 +41,40 @@ spec:
                   endpoint: 0.0.0.0:4317
                 http:
                   endpoint: 0.0.0.0:4318
+
           exporters:
             otlp/tempo:
               endpoint: tempo-stack.monitoring.svc.cluster.local:4317
               tls:
                 insecure: true
+
             loki:
               endpoint: http://loki-stack.monitoring.svc.cluster.local:3100/loki/api/v1/push
+
           service:
             telemetry:
               metrics:
                 level: none
                 readers: []
+
             pipelines:
               traces:
                 receivers: [otlp]
                 exporters: [otlp/tempo]
+
               logs:
                 receivers: [otlp]
                 exporters: [loki]
+
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
+
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
