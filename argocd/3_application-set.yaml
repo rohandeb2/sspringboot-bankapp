@@ -13,12 +13,12 @@ spec:
             env: prod
 
           - appName: istio-base
-            path: service-mesh
+            path: service-mesh/networking
             namespace: istio-system
             env: infra-istio
 
           - appName: sonarqube
-            path: security-scanning        # fixed typo: was "secuity-scanning"
+            path: security-scanning/devsecops
             namespace: devsecops
             env: security
 
