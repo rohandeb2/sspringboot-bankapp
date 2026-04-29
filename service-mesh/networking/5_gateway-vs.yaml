@@ -12,8 +12,7 @@ spec:
       name: http
       protocol: HTTP
     hosts:
-    - "api.rohandevops.co.in"
-    - "rohandevops.co.in"
+    - "*"        # ← wildcard catches ALL hosts including acme challenge
   - port:
       number: 443
       name: https
@@ -25,7 +24,6 @@ spec:
       mode: SIMPLE
       credentialName: banking-tls-cert
 ---
-# Routes ACME challenge for api.rohandevops.co.in
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
@@ -42,11 +40,10 @@ spec:
         prefix: "/.well-known/acme-challenge/"
     route:
     - destination:
-        host: cm-acme-http-solver-wsxjh.istio-system.svc.cluster.local
+        host: cm-acme-http-solver-tbchx.istio-system.svc.cluster.local
         port:
           number: 8089
 ---
-# Routes ACME challenge for rohandevops.co.in
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
@@ -63,11 +60,10 @@ spec:
         prefix: "/.well-known/acme-challenge/"
     route:
     - destination:
-        host: cm-acme-http-solver-687hh.istio-system.svc.cluster.local
+        host: cm-acme-http-solver-6cp2r.istio-system.svc.cluster.local
         port:
           number: 8089
 ---
-# Main app - only after challenge routes above
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
