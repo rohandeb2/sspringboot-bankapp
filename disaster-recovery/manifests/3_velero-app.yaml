@@ -1,5 +1,3 @@
-# This file is updated to use IRSA for AWS EBS snapshots and 
-# secure internal communication for MinIO backups.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -17,31 +15,22 @@ spec:
           backupStorageLocation:
             - name: default
               provider: aws
-              bucket: velero-backups
+              bucket: bankapp-velero-backups-959589242185
               config:
-                region: minio
-                s3ForcePathStyle: true
-                # Using the standard internal service DNS
-                s3Url: http://minio.velero.svc.cluster.local:9000
+                region: us-east-1
           volumeSnapshotLocation:
             - name: default
               provider: aws
               config:
                 region: us-east-1
-        
-        # FIX: Enabling ServiceAccount annotations for IRSA
         serviceAccount:
           server:
             create: true
             name: velero-server
             annotations:
               eks.amazonaws.com/role-arn: arn:aws:iam::959589242185:role/bankapp-prod-velero-irsa
-
-        # FIX: Remove secretContents for security. 
-        # Velero will now use the IAM role for AWS APIs.
         credentials:
-          useSecret: false 
-
+          useSecret: false
         initContainers:
           - name: velero-plugin-for-aws
             image: velero/velero-plugin-for-aws:v1.9.0
@@ -55,3 +44,6 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
