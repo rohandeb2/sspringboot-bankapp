@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/rohandeb2/sspringboot-bankapp
     targetRevision: HEAD
-    path: k8s-manifests/argocd-infra/vpa
+    path: vpa
     directory:
       recurse: false
       # Apply in filename order: 1_, 2_, 3_, 4_, 5_
