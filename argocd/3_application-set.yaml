@@ -11,17 +11,14 @@ spec:
             path: banking-app
             namespace: banking-prod
             env: prod
-
           - appName: istio-base
             path: service-mesh/networking
             namespace: istio-system
             env: infra-istio
-
           - appName: sonarqube
             path: security-scanning/devsecops
             namespace: devsecops
             env: security
-
   template:
     metadata:
       name: '{{env}}-{{appName}}'
@@ -31,9 +28,7 @@ spec:
         repoURL: 'https://github.com/rohandeb2/sspringboot-bankapp'
         targetRevision: HEAD
         path: '{{path}}'
-        helm:
-          valueFiles:
-            - values.yaml
+        # NO helm: block here — these are plain YAML manifests
       destination:
         server: https://kubernetes.default.svc
         namespace: '{{namespace}}'
