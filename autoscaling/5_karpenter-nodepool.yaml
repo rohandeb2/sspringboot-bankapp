@@ -1,3 +1,13 @@
+
+# This NodePool enables:
+
+# ✔ Auto scaling EC2 nodes for pods
+# ✔ Mix of spot + on-demand cost optimization
+# ✔ Controlled instance families (t/m/c)
+# ✔ Automatic cleanup of idle nodes
+# ✔ Tight integration with EC2NodeClass
+# ✔ Fully dynamic, cloud-native cluster scaling
+
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:

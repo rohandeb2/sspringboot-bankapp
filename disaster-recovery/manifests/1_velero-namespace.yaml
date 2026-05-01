@@ -1,3 +1,12 @@
+# This namespace enables:
+
+# ✔ Dedicated environment for Velero
+# ✔ Secure privileged access for cluster backups
+# ✔ Isolation from application workloads
+# ✔ Clear infrastructure classification
+# ✔ Foundation for disaster recovery system (backup + restore of Kubernetes cluster)
+
+
 # This file creates a secure, isolated, and resource-limited namespace for Velero to safely perform backups and restores.
 
 apiVersion: v1  # Core Kubernetes API version for basic resources
@@ -9,40 +18,3 @@ metadata:
     name: velero  # Label to identify the namespace
     tier: infrastructure  # Marks this namespace as infra-level (not app-level)
     purpose: disaster-recovery  # Indicates this namespace is used for backups and recovery
----
-apiVersion: v1  # Core Kubernetes API
-kind: ResourceQuota  # Limits total resource usage in a namespace
-metadata:
-  name: velero-resource-quota  # Name of the quota policy
-  namespace: velero  # Applies only to velero namespace
-spec:
-  hard:
-    requests.cpu: "500m"  # Total CPU requests allowed in namespace
-    requests.memory: "512Mi"  # Total memory requests allowed
-    limits.cpu: "1000m"  # Maximum CPU usage allowed
-    limits.memory: "1Gi"  # Maximum memory usage allowed
----
-apiVersion: networking.k8s.io/v1  # API for network policies
-kind: NetworkPolicy  # Controls network traffic between pods
-metadata:
-  name: allow-velero-internal  # Name of the network policy
-  namespace: velero  # Applies to velero namespace
-spec:
-  podSelector: {}  # Applies to all pods in this namespace
-  policyTypes:
-  - Ingress  # Controls incoming traffic only
-  - Egress  # Controls outgoing traffic only
-  ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          name: argocd  # Only pods from argocd namespace are allowed to communicate
-    - namespaceSelector:
-        matchLabels:
-          name: velero  # Allows communication within velero namespace (for Velero components to talk to each other)
-  egress:
-  - to:
-    - ipBlock:
-        cidr: 0.0.0.0/0  # Allows outgoing traffic to anywhere (for Velero to access cloud APIs and storage)
-  - to:
-    - namespaceSelector: {}

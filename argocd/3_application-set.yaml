@@ -1,3 +1,14 @@
+# This ApplicationSet dynamically generates multiple ArgoCD applications for application, infrastructure, 
+# and security stacks, enabling fully automated GitOps-based multi-environment deployments.
+
+# This single file gives you:
+
+# ✔ 3 production systems deployed automatically
+# ✔ Fully Git-driven infrastructure
+# ✔ Zero manual ArgoCD app creation
+# ✔ Scalable platform design
+# ✔ Clean separation of workloads
+
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:

@@ -1,3 +1,13 @@
+# It tells Kubernetes: Install and configure MinIO as an internal object storage system to store backups (like AWS S3).
+# This setup provides:
+
+# ✔ Internal S3-compatible storage (MinIO)
+# ✔ Dedicated bucket for Velero backups
+# ✔ Persistent 50Gi storage backend
+# ✔ Secure non-root container execution
+# ✔ GitOps-managed infrastructure via ArgoCD
+# ✔ Cluster-local backup storage system
+
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

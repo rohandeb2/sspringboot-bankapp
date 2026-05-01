@@ -80,4 +80,5 @@ spec:
     - destination:
         host: bankapp-banking-platform-active.banking-prod.svc.cluster.local
         port:
-          number: 80
+          number: 80  
+    

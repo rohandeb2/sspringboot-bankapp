@@ -1,3 +1,17 @@
+# It tells Velero: Every 6 hours, take a backup of the banking-prod namespace and store it in the configured storage location.
+# 🔁 What happens in real life
+
+# Every 6 hours:
+
+# Velero scans banking-prod
+# Collects Kubernetes state
+# Packages it as a backup
+# Uploads it to:
+# MinIO bucket (or S3)
+# Keeps it for 30 days
+# Deletes old backups automatically
+
+
 apiVersion: velero.io/v1
 kind: Schedule
 metadata:

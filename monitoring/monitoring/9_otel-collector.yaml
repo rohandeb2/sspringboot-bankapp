@@ -77,4 +77,4 @@ spec:
 
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true
+      - ServerSideApply=true  

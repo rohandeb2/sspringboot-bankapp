@@ -1,0 +1,37 @@
+# It tells Kubernetes: Velero namespace cannot exceed these CPU and memory limits.
+# This ResourceQuota ensures:
+
+# ✔ Velero runs in a controlled resource boundary
+# ✔ Prevents backup jobs from overloading cluster
+# ✔ Enforces CPU + memory fairness
+# ✔ Protects production workloads from backup spikes
+
+# 🛡️ Why this is important (Velero context)
+
+# Velero handles:
+
+# Backup of PVs (EBS volumes)
+# Snapshot operations
+# Cluster-wide API calls
+
+# Without quotas:
+# ❌ It could consume too many resources during backup jobs
+# ❌ Impact production workloads
+# ❌ Cause node pressure or eviction
+
+# With quotas:
+# ✔ Predictable resource usage
+# ✔ Safer backup operations
+# ✔ Stable cluster performance
+
+apiVersion: v1  # Core Kubernetes API
+kind: ResourceQuota  # Limits total resource usage in a namespace
+metadata:
+  name: velero-resource-quota  # Name of the quota policy
+  namespace: velero  # Applies only to velero namespace
+spec:
+  hard:
+    requests.cpu: "500m"  # Total CPU requests allowed in namespace
+    requests.memory: "512Mi"  # Total memory requests allowed
+    limits.cpu: "1000m"  # Maximum CPU usage allowed
+    limits.memory: "1Gi"  # Maximum memory usage allowed
