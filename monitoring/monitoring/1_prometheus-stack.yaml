@@ -1,3 +1,9 @@
+# It installs kube-prometheus-stack, which gives you:
+
+# Prometheus (metrics collection + alerting engine)
+# Grafana (dashboards + visualization)
+# Alertmanager (alert routing system)
+
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

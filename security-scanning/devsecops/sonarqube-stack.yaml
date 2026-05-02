@@ -1,3 +1,13 @@
+# It installs a fully working SonarQube stack (app + database + storage + ingress) into your cluster and makes it GitOps-managed.
+# This file gives you:
+
+# ✔ SonarQube deployed via GitOps (ArgoCD)
+# ✔ PostgreSQL database automatically installed
+# ✔ Persistent storage for reports & plugins
+# ✔ External access via domain
+# ✔ Resource-controlled stable deployment
+# ✔ Fully automated CI/CD security scanner backend
+
 # These file deploy SonarQube, which is a code quality and security analysis tool, using ArgoCD.
 
 apiVersion: argoproj.io/v1alpha1  # CRD version for ArgoCD Application

@@ -1,4 +1,12 @@
+# It tells your Kubernetes cluster:
+# “Which AWS IAM roles are allowed to join and operate as Kubernetes nodes
+# This file enables:
 
+# ✔ EKS worker nodes to join cluster
+# ✔ Karpenter auto-scaled nodes to join cluster
+# ✔ Secure IAM-based authentication
+# ✔ Controlled node-level access
+# ✔ No manual node registration needed
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -7,6 +15,11 @@ metadata:
 data:
   mapRoles: |
     - rolearn: arn:aws:iam::959589242185:role/bankapp-prod-eks-node-role
+      groups:
+      - system:bootstrappers
+      - system:nodes
+      username: system:node:{{EC2PrivateDNSName}}
+    - rolearn: arn:aws:iam::959589242185:role/bankapp-prod-karpenter-node-role
       groups:
       - system:bootstrappers
       - system:nodes

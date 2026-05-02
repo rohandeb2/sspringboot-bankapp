@@ -24,14 +24,14 @@
 # ✔ Safer backup operations
 # ✔ Stable cluster performance
 
-apiVersion: v1  # Core Kubernetes API
-kind: ResourceQuota  # Limits total resource usage in a namespace
+apiVersion: v1
+kind: ResourceQuota
 metadata:
-  name: velero-resource-quota  # Name of the quota policy
-  namespace: velero  # Applies only to velero namespace
+  name: velero-resource-quota
+  namespace: velero
 spec:
   hard:
-    requests.cpu: "500m"  # Total CPU requests allowed in namespace
-    requests.memory: "512Mi"  # Total memory requests allowed
-    limits.cpu: "1000m"  # Maximum CPU usage allowed
-    limits.memory: "1Gi"  # Maximum memory usage allowed
+    requests.cpu: "4"
+    requests.memory: "8Gi"
+    limits.cpu: "8"
+    limits.memory: "16Gi"

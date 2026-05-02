@@ -1,3 +1,11 @@
+# 🚀 FINAL RESULT
+
+# ✔ Automatic HTTPS for your banking APIs
+# ✔ No manual SSL management
+# ✔ Trusted public certificates (Let’s Encrypt)
+# ✔ Works with Istio ingress gateway
+# ✔ Auto-renewal before expiry
+
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:

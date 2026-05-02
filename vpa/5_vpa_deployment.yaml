@@ -1,4 +1,56 @@
+# This file turns Kubernetes into a self-tuning system where pods automatically get the right CPU and memory based on real usage patterns.
+# 🔥 1. vpa-recommender
+# ✔ What it does:
+# Watches all pods in the cluster
+# Collects CPU/memory usage history
+# Calculates optimal resource recommendations
+# ✔ Output:
+# “This pod should use 300m CPU instead of 100m”
+# “Increase memory from 256Mi → 512Mi”
 
+# 👉 It does NOT change anything itself — it only recommends.
+
+# 🔥 2. vpa-updater
+# ✔ What it does:
+# Applies recommendations from recommender
+# Evicts pods if needed
+# Triggers restart so new resources take effect
+
+# 👉 This is the enforcement engine
+
+# 🔥 3. vpa-admission-controller
+# ✔ What it does:
+# Intercepts pod creation requests
+# Injects recommended CPU/memory values at pod start
+# Uses TLS-secured webhook (your cert-manager setup)
+# Important flags:
+# --register-webhook=false
+
+# 👉 Means:
+
+# Webhook is already registered manually (via your CRD config)
+# Prevents duplicate registration
+# 🔐 TLS SECURITY (VERY IMPORTANT)
+# secretName: vpa-tls-certs
+
+# This mounts:
+
+# TLS certificate
+# CA certificate
+# Private key
+
+# 👉 Ensures:
+
+# Secure communication between API server and webhook
+# No plain HTTP traffic
+# 🔗 4. Service: vpa-webhook
+# kind: Service
+# ✔ What it does:
+# Exposes admission controller internally
+# Kubernetes API server calls this service
+# Route: :8000
+
+# 👉 This is the entry point for VPA mutation logic.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -1,3 +1,25 @@
+# It creates a private CA inside Kubernetes and uses it to:
+
+# Sign TLS certificates for VPA admission webhooks securely.
+
+# This ensures:
+
+# secure communication between Kubernetes API server and VPA webhook
+# no dependency on external certificate providers
+
+# 🔥 Why this setup exists (real reason)
+
+# VPA uses admission webhooks, which require:
+
+# TLS encryption
+# trusted CA chain
+# cert rotation support
+
+# Without this:
+
+# ❌ Kubernetes API server would reject webhook
+# ❌ VPA would not function
+# ❌ resource recommendations fail
 # Step 1: Bootstrap issuer to create the CA cert itself
 apiVersion: cert-manager.io/v1
 kind: Issuer

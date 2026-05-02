@@ -1,3 +1,7 @@
+# It defines custom monitoring + alert rules that Prometheus continuously evaluates.
+
+# If something goes wrong in your cluster → it triggers alerts via Alertmanager.
+
 # THis file is an argocd application that deploys the PrometheusRule CRD which defines custom alerting rules for our Prometheus monitoring setup.
 # By managing this as an ArgoCD application, we can version control our alerting rules
 

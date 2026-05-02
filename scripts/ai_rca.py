@@ -1,3 +1,13 @@
+# It takes:
+# ✔ Jenkins build logs
+# ✔ Sends them to Google Gemini AI
+# ✔ Gets back:
+
+# Root cause of failure
+# Suggested fix
+
+# 👉 Then prints AI analysis in terminal / Jenkins pipeline
+
 # Pre-requisites & Local Setup
 # Before we start, ensure your local environment is ready:
 

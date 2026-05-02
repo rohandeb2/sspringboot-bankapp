@@ -1,3 +1,11 @@
+# It installs and configures Istio Pilot (istiod) which is responsible for:
+
+# ✔ Service discovery
+# ✔ Traffic routing rules
+# ✔ mTLS security
+# ✔ Sidecar injection
+# ✔ Observability (tracing + logs)
+
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

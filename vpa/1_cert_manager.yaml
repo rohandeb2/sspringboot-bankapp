@@ -1,3 +1,17 @@
+# Install cert-manager in the cluster so I can automatically issue and renew TLS certificates for services like Ingress, APIs, and internal workloads.
+# 🔐 What cert-manager enables in your system
+
+# Once deployed, you can:
+
+# 🔒 1. Auto-generate TLS certificates
+# For Ingress (ALB / NGINX / Istio)
+# For internal services
+# 🔁 2. Auto-renew certificates
+# No manual SSL rotation
+# 🌐 3. Use Let's Encrypt / internal CA
+# HTTP-01 or DNS-01 validation
+
+
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

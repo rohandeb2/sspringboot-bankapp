@@ -67,7 +67,7 @@ serviceMonitor:
 ingress:
   enabled: false
   host: "api.rohandevops.co.in"
-  certificateArn: "arn:aws:acm:us-east-1:959589242185:certificate/fd555665-ad30-46b4-88ed-de002f0a3667"
+  certificateArn: "arn:aws:acm:us-east-1:959589242185:certificate/59dfb445-8ebd-4c21-bcb8-097e66d45c1e"
 
 # Istio - disabled until Layer 6
 istio:

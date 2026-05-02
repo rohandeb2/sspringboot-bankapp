@@ -1,4 +1,11 @@
 #This is a Kyverno ClusterPolicy that enforces security and resource rules in your Kubernetes cluster.
+# This file enforces:
+
+# ✔ Mandatory CPU/memory limits
+# ✔ No root containers in production
+# ✔ Cluster-wide security baseline
+# ✔ Real-time + background policy enforcement
+# ✔ Prevention of unsafe workloads before deployment
 
 apiVersion: kyverno.io/v1  # API version for Kyverno policies
 kind: ClusterPolicy  # Cluster-wide policy (applies to entire Kubernetes cluster)

@@ -1,3 +1,17 @@
+# 👉 It makes your monitoring stack production-ready by adding:
+
+# persistent storage
+# resource limits
+# data retention policies
+# This configuration gives you:
+
+# ✔ Persistent Prometheus metrics storage
+# ✔ 15-day monitoring history retention
+# ✔ Stable memory allocation for Prometheus
+# ✔ Grafana dashboards persistence
+# ✔ Alertmanager state persistence
+# ✔ AWS gp3-backed monitoring storage
+
 prometheus:
   prometheusSpec:
     retention: 15d
