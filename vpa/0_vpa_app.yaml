@@ -13,7 +13,6 @@ spec:
     path: vpa
     directory:
       recurse: false
-      # Apply in filename order: 1_, 2_, 3_, 4_, 5_
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
@@ -26,9 +25,15 @@ spec:
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
   ignoreDifferences:
-    # cert-manager manages caBundle — ignore ArgoCD drift on this field
     - group: admissionregistration.k8s.io
       kind: MutatingWebhookConfiguration
       name: vpa-webhook-config
       jsonPointers:
         - /webhooks/0/clientConfig/caBundle
+    # ADD THIS BLOCK - ignores the self-reference drift
+    - group: argoproj.io
+      kind: Application
+      name: vpa-stack
+      namespace: argocd
+      jsonPointers:
+        - /spec

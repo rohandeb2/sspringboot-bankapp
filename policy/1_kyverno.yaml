@@ -18,4 +18,17 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-      - Replace=true  
+      - ServerSideApply=true          # ADD THIS
+      - RespectIgnoreDifferences=true  # ADD THIS
+  ignoreDifferences:                   # ADD THIS ENTIRE BLOCK
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      jsonPointers:
+        - /spec/conversion
+        - /status
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: kyverno:migrate-resources
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: kyverno:migrate-resources

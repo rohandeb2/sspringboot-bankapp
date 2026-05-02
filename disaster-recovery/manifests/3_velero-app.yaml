@@ -1,70 +1,62 @@
-# It tells ArgoCD: Install Velero in the cluster and configure it to store backups in MinIO instead of AWS S3.
-# 🔥 What this setup achieves
-
-# ✔ Velero installed via GitOps (ArgoCD)
-# ✔ Backups stored in MinIO (NOT AWS)
-# ✔ S3-compatible integration working
-# ✔ Fully automated DR system
-# ✔ Credentials managed via Kubernetes Secret
-# ✔ Production-style backup scheduling ready
-
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: velero
   namespace: argocd
-
 spec:
   project: default
-
   source:
     repoURL: https://vmware-tanzu.github.io/helm-charts
     chart: velero
     targetRevision: 11.4.0
-
     helm:
       values: |
         configuration:
           backupStorageLocation:
             - name: default
-              provider: aws   # REQUIRED (MinIO is S3-compatible)
+              provider: aws
               bucket: velero-backups
               config:
                 region: us-east-1
                 s3ForcePathStyle: "true"
-                s3Url: http://minio.minio.svc.cluster.local:9000
-
+                s3Url: http://minio.velero.svc.cluster.local:9000
           volumeSnapshotLocation:
             - name: default
               provider: aws
               config:
                 region: us-east-1
-
         credentials:
           useSecret: true
           existingSecret: velero-minio-secret
-
         serviceAccount:
           server:
             create: true
             name: velero-server
-
         initContainers:
           - name: velero-plugin-for-aws
             image: velero/velero-plugin-for-aws:v1.9.0
             volumeMounts:
               - mountPath: /target
                 name: plugins
-
   destination:
     server: https://kubernetes.default.svc
     namespace: velero
-
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
-
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true
+      - ServerSideApply=true          # ADD THIS
+      - RespectIgnoreDifferences=true  # ADD THIS
+  ignoreDifferences:                   # ADD THIS ENTIRE BLOCK
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      jsonPointers:
+        - /spec/conversion
+        - /status
+    - group: velero.io
+      kind: BackupStorageLocation
+      jsonPointers:
+        - /spec/accessMode
+        - /status
