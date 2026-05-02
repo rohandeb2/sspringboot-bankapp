@@ -47,13 +47,15 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true          # ADD THIS
-      - RespectIgnoreDifferences=true  # ADD THIS
-  ignoreDifferences:                   # ADD THIS ENTIRE BLOCK
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
     - group: apiextensions.k8s.io
       kind: CustomResourceDefinition
       jsonPointers:
         - /spec/conversion
+        - /spec/preserveUnknownFields
+        - /spec/versions
         - /status
     - group: velero.io
       kind: BackupStorageLocation
