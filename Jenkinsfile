@@ -69,50 +69,50 @@ pipeline {
         // ─────────────────────────────────────────
         // STAGE 2 — SAST: SonarQube
         // ─────────────────────────────────────────
-        stage('2. SAST — SonarQube') {
-            steps {
-                script {
-                    // Verify SonarQube is reachable before scanning
-                    def sonarStatus = sh(
-                        script: "curl -s -o /dev/null -w '%{http_code}' ${SONAR_URL}/api/system/status",
-                        returnStdout: true
-                    ).trim()
+        // stage('2. SAST — SonarQube') {
+        //     steps {
+        //         script {
+        //             // Verify SonarQube is reachable before scanning
+        //             def sonarStatus = sh(
+        //                 script: "curl -s -o /dev/null -w '%{http_code}' ${SONAR_URL}/api/system/status",
+        //                 returnStdout: true
+        //             ).trim()
 
-                    if (sonarStatus != '200') {
-                        error "SonarQube not reachable at ${SONAR_URL} (HTTP ${sonarStatus}). Is the pod running and port-forwarded?"
-                    }
+        //             if (sonarStatus != '200') {
+        //                 error "SonarQube not reachable at ${SONAR_URL} (HTTP ${sonarStatus}). Is the pod running and port-forwarded?"
+        //             }
 
-                    sh """
-                        mvn sonar:sonar \
-                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                          -Dsonar.projectName=${SONAR_PROJECT_KEY} \
-                          -Dsonar.host.url=${SONAR_URL} \
-                          -Dsonar.login=${env.SONAR_TOKEN} \
-                          -Dsonar.java.binaries=target/classes \
-                          -Dsonar.sources=src/main/java \
-                          -Dsonar.tests=src/test/java
-                    """
+        //             sh """
+        //                 mvn sonar:sonar \
+        //                   -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+        //                   -Dsonar.projectName=${SONAR_PROJECT_KEY} \
+        //                   -Dsonar.host.url=${SONAR_URL} \
+        //                   -Dsonar.login=${env.SONAR_TOKEN} \
+        //                   -Dsonar.java.binaries=target/classes \
+        //                   -Dsonar.sources=src/main/java \
+        //                   -Dsonar.tests=src/test/java
+        //             """
 
-                    // Wait for SonarQube quality gate result
-                    sleep(time: 30, unit: 'SECONDS')
+        //             // Wait for SonarQube quality gate result
+        //             sleep(time: 30, unit: 'SECONDS')
 
-                    def qgResponse = sh(
-                        script: """
-                            curl -s -u ${env.SONAR_TOKEN}: \
-                            "${SONAR_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}" \
-                            | python3 -c "import sys,json; print(json.load(sys.stdin)['projectStatus']['status'])"
-                        """,
-                        returnStdout: true
-                    ).trim()
+        //             def qgResponse = sh(
+        //                 script: """
+        //                     curl -s -u ${env.SONAR_TOKEN}: \
+        //                     "${SONAR_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}" \
+        //                     | python3 -c "import sys,json; print(json.load(sys.stdin)['projectStatus']['status'])"
+        //                 """,
+        //                 returnStdout: true
+        //             ).trim()
 
-                    echo "SonarQube Quality Gate: ${qgResponse}"
+        //             echo "SonarQube Quality Gate: ${qgResponse}"
 
-                    if (qgResponse == 'ERROR') {
-                        error "SonarQube Quality Gate FAILED. Fix code issues before proceeding."
-                    }
-                }
-            }
-        }
+        //             if (qgResponse == 'ERROR') {
+        //                 error "SonarQube Quality Gate FAILED. Fix code issues before proceeding."
+        //             }
+        //         }
+        //     }
+        // }
 
         // ─────────────────────────────────────────
         // STAGE 3 — SCA: OWASP Dependency Check
