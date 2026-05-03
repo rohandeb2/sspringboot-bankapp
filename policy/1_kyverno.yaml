@@ -34,3 +34,11 @@ spec:
     - group: rbac.authorization.k8s.io
       kind: ClusterRoleBinding
       name: kyverno:migrate-resources
+    - group: admissionregistration.k8s.io        # ADD THIS
+      kind: MutatingWebhookConfiguration
+      jqPathExpressions:
+        - .webhooks[].clientConfig.caBundle
+    - group: admissionregistration.k8s.io        # ADD THIS
+      kind: ValidatingWebhookConfiguration
+      jqPathExpressions:
+        - .webhooks[].clientConfig.caBundle
