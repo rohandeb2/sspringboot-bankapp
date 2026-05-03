@@ -7,12 +7,18 @@ def analyze_logs(log_text):
     api_key = os.getenv("GEMINI_API_KEY")
 
     if not api_key or api_key == "None":
-        return "ERROR: GEMINI_API_KEY not set or empty"
+        return "ERROR: API key not set"
 
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + api_key
+    url = "https://api.groq.com/openai/v1/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
 
     prompt = (
-        "You are a DevOps expert. Analyze these Jenkins CI/CD pipeline logs for a Spring Boot banking app.\n"
+        "You are a DevOps expert. Analyze these Jenkins CI/CD pipeline logs "
+        "for a Spring Boot banking app.\n"
         "Provide:\n"
         "1. ROOT CAUSE: What exactly failed and why\n"
         "2. FAILED STAGE: Which pipeline stage failed\n"
@@ -20,17 +26,21 @@ def analyze_logs(log_text):
         f"LOGS:\n{log_text[-3000:]}"
     )
 
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    payload = {
+        "model": "llama-3.1-8b-instant",
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 1000
+    }
 
     try:
-        response = requests.post(url, json=payload, timeout=30)
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
         data = response.json()
 
-        if "candidates" not in data:
+        if "choices" not in data:
             error_msg = data.get("error", {}).get("message", str(data))
-            return f"Gemini API error: {error_msg}"
+            return f"Groq API error: {error_msg}"
 
-        return data["candidates"][0]["content"]["parts"][0]["text"]
+        return data["choices"][0]["message"]["content"]
 
     except Exception as e:
         return f"Script exception: {str(e)}"
