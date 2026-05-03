@@ -24,21 +24,14 @@ spec:
     - group: apiextensions.k8s.io
       kind: CustomResourceDefinition
       jqPathExpressions:
-        - .spec.conversion
-        - .spec.preserveUnknownFields
-        - .spec.versions
+        - .spec
         - .status
-    - group: rbac.authorization.k8s.io
-      kind: ClusterRole
-      name: kyverno:migrate-resources
-    - group: rbac.authorization.k8s.io
-      kind: ClusterRoleBinding
-      name: kyverno:migrate-resources
-    - group: admissionregistration.k8s.io        # ADD THIS
+        - .metadata.annotations
+    - group: admissionregistration.k8s.io
       kind: MutatingWebhookConfiguration
       jqPathExpressions:
         - .webhooks[].clientConfig.caBundle
-    - group: admissionregistration.k8s.io        # ADD THIS
+    - group: admissionregistration.k8s.io
       kind: ValidatingWebhookConfiguration
       jqPathExpressions:
         - .webhooks[].clientConfig.caBundle
