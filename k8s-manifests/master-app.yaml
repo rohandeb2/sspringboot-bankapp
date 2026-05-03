@@ -13,7 +13,7 @@ spec:
     path: .
     directory:
       recurse: true
-      exclude: "{terraform/**,*.md,scripts/**,src/**,vars/**,.github/**,Dockerfile,docker-compose.yml,nginx.conf,pom.xml,mvnw,mvnw.cmd,.env,.gitignore,banking-app/**,iam_policy.json,policy/*,disaster-recovery/manifests/2_minio-stack.yaml,disaster-recovery/manifests/3_velero-app.yaml,security-scanning/devsecops/sonarqube-stack.yaml,service-mesh/networking/2_istio-gateway.yaml,trust-policy.json,gateway/**}"
+      exclude: "{terraform/**,*.md,scripts/**,src/**,vars/**,.github/**,Dockerfile,docker-compose.yml,nginx.conf,pom.xml,mvnw,mvnw.cmd,.env,.gitignore,banking-app/**,iam_policy.json,policy/*,disaster-recovery/manifests/2_minio-stack.yaml,disaster-recovery/manifests/3_velero-app.yaml,security-scanning/devsecops/sonarqube-stack.yaml,service-mesh/networking/2_istio-gateway.yaml,trust-policy.json,gateway/**,vpa/**,service-mesh/networking/4_peer-auth.yaml,service-mesh/networking/5_gateway-vs.yaml,service-mesh/networking/6_tls_cert.yaml}"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
