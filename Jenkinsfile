@@ -1,17 +1,14 @@
-// Jenkinsfile
-node {
-    // 1. Checkout the current repo so Jenkins can see the 'vars' folder
-    checkout scm
-    
-    // 2. Load the script file
-    def pipelineScript = load 'vars/devSecOpsPipeline.groovy'
+def pipelineScript
 
-    // 3. Execute the function inside the script
-    pipelineScript.call(
-        appName: 'springboot-bankapp',
-        repoName: 'sspringboot-bankapp',
-        awsAccountId: '959589242185', 
-        awsRegion: 'us-east-1',
-        emailRecipient: 'ruhondeb28@gmail.com'
-    )
+node {
+    checkout scm
+    pipelineScript = load 'vars/devSecOpsPipeline.groovy'
 }
+
+pipelineScript.call(
+    appName: 'springboot-bankapp',
+    repoName: 'sspringboot-bankapp',
+    awsAccountId: '959589242185',
+    awsRegion: 'us-east-1',
+    emailRecipient: 'ruhondeb28@gmail.com'
+)
