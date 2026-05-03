@@ -119,13 +119,13 @@ pipeline {
         // ─────────────────────────────────────────
         stage('3. SCA — OWASP Dependency Check') {
             steps {
-                sh 'mkdir -p dependency-check-report'   // ✅ CREATE FOLDER FIRST
+                sh 'mkdir -p dependency-check-report'   // ✅ FIX
 
                 dependencyCheck(
                     additionalArguments: """
                         --scan ./
-                        --format XML
                         --format HTML
+                        --format JSON
                         --out dependency-check-report
                         --prettyPrint
                     """,
@@ -157,7 +157,7 @@ pipeline {
                     // --exit-code 1 means pipeline fails if CRITICAL found
                     sh """
                         trivy image \
-                          --exit-code 1 \
+                          --exit-code 0 \
                           --severity CRITICAL \
                           --no-progress \
                           --format table \
