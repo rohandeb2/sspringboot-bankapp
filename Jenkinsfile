@@ -190,25 +190,37 @@ pipeline {
                 script {
                     def fullImage = "${ECR_URL}/${IMAGE_REPO}:${IMAGE_TAG}"
 
-                    // Login and push
+                    // ✅ Create ECR repo if not exists
+                    sh """
+                        aws ecr describe-repositories \
+                        --repository-names ${IMAGE_REPO} \
+                        --region ${AWS_REGION} >/dev/null 2>&1 || \
+                        aws ecr create-repository \
+                        --repository-name ${IMAGE_REPO} \
+                        --region ${AWS_REGION}
+                    """
+
+                    // Login to ECR
                     sh """
                         aws ecr get-login-password --region ${AWS_REGION} | \
                         docker login --username AWS --password-stdin ${ECR_URL}
-                        docker push ${fullImage}
                     """
 
-                    // Wait for ECR native scan (runs automatically on push if enabled)
+                    // Push image
+                    sh "docker push ${fullImage}"
+
+                    // Wait for scan
                     echo "Waiting 60s for ECR native scan to complete..."
                     sleep(time: 60, unit: 'SECONDS')
 
-                    // Print ECR scan results (informational — does not fail pipeline)
+                    // Print scan results
                     sh """
                         SCAN_STATUS=\$(aws ecr describe-image-scan-findings \
-                          --repository-name ${IMAGE_REPO} \
-                          --image-id imageTag=${IMAGE_TAG} \
-                          --region ${AWS_REGION} \
-                          --query 'imageScanFindings.findingSeverityCounts' \
-                          --output json 2>/dev/null || echo '{}')
+                        --repository-name ${IMAGE_REPO} \
+                        --image-id imageTag=${IMAGE_TAG} \
+                        --region ${AWS_REGION} \
+                        --query 'imageScanFindings.findingSeverityCounts' \
+                        --output json 2>/dev/null || echo '{}')
                         echo "ECR Scan Results: \$SCAN_STATUS"
                     """
                 }
