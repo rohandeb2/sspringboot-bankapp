@@ -119,26 +119,25 @@ pipeline {
         // ─────────────────────────────────────────
         stage('3. SCA — OWASP Dependency Check') {
             steps {
-                // Run OWASP scan
+                sh 'mkdir -p dependency-check-report'   // ✅ CREATE FOLDER FIRST
+
                 dependencyCheck(
                     additionalArguments: """
                         --scan ./
+                        --format XML
                         --format HTML
-                        --format JSON
                         --out dependency-check-report
                         --prettyPrint
                     """,
                     odcInstallation: 'DP-Check'
                 )
 
-                // Publish HTML report in Jenkins UI
                 dependencyCheckPublisher(
                     pattern: 'dependency-check-report/dependency-check-report.xml',
                     failedTotalCritical: 1,
                     unstableTotalHigh: 5
                 )
 
-                // Archive the full report
                 archiveArtifacts artifacts: 'dependency-check-report/**', allowEmptyArchive: true
             }
         }
