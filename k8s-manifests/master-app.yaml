@@ -10,23 +10,12 @@ spec:
   source:
     repoURL: https://github.com/rohandeb2/sspringboot-bankapp
     targetRevision: HEAD
-    path: .
+    path: argocd
     directory:
       recurse: true
-      exclude: "{terraform/**,*.md,scripts/**,src/**,vars/**,.github/**,Dockerfile,docker-compose.yml,nginx.conf,pom.xml,mvnw,mvnw.cmd,.env,.gitignore,iam_policy.json,trust-policy.json,banking-app/**,gateway/**,vpa/**,monitoring/**,service-mesh/**,autoscaling/**,disaster-recovery/**,security-scanning/**,policy/**}"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
-  ignoreDifferences:
-    - group: external-secrets.io
-      kind: ExternalSecret
-      jsonPointers:
-        - /spec/data
-        - /spec/target
-    - group: kyverno.io
-      kind: ClusterPolicy
-      jsonPointers:
-        - /spec/rules
   syncPolicy:
     automated:
       prune: true
