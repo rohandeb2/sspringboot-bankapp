@@ -13,6 +13,13 @@ pipeline {
         SONAR_PROJECT_KEY           = "springboot-bankapp"
     }
 
+    // ─────────────────────────────────────────
+    // AUTO TRIGGER — on every GitHub push
+    // ─────────────────────────────────────────
+    triggers {
+        githubPush()
+    }
+
     stages {
 
         // ─────────────────────────────────────────
@@ -21,7 +28,6 @@ pipeline {
         stage('0. Configure AWS + Pull Secrets') {
             steps {
                 script {
-                    // AWS creds
                     def awsSecret = sh(
                         script: "aws secretsmanager get-secret-value --secret-id jenkins-aws-creds --region ${AWS_REGION} --query SecretString --output text",
                         returnStdout: true
@@ -30,7 +36,6 @@ pipeline {
                     env.AWS_ACCESS_KEY_ID     = awsCreds.aws_access_key_id
                     env.AWS_SECRET_ACCESS_KEY = awsCreds.aws_secret_access_key
 
-                    // Jenkins secrets (sonar token + gemini key)
                     def jenkinsSecret = sh(
                         script: "aws secretsmanager get-secret-value --secret-id jenkins-secret --region ${AWS_REGION} --query SecretString --output text",
                         returnStdout: true
@@ -39,7 +44,6 @@ pipeline {
                     env.SONAR_TOKEN = jenkinsCreds.'sonar-token'
                     env.GEMINI_KEY  = jenkinsCreds.gemini_api_key
 
-                    // GitHub creds
                     def githubSecret = sh(
                         script: "aws secretsmanager get-secret-value --secret-id banking-github-creds --region ${AWS_REGION} --query SecretString --output text",
                         returnStdout: true
@@ -67,59 +71,65 @@ pipeline {
         }
 
         // ─────────────────────────────────────────
-        // STAGE 2 — SAST: SonarQube
+        // STAGE 2 — SAST: SonarQube (disabled until pod is stable)
+        // Uncomment this entire stage once SonarQube is running:
+        //   kubectl get pods -n devsecops → sonarqube-sonarqube-0 1/1 Running
+        //   kubectl port-forward svc/sonarqube-sonarqube -n devsecops 9000:9000 &
+        //   curl http://localhost:9000/api/system/status → {"status":"UP"}
         // ─────────────────────────────────────────
-        // stage('2. SAST — SonarQube') {
-        //     steps {
-        //         script {
-        //             // Verify SonarQube is reachable before scanning
-        //             def sonarStatus = sh(
-        //                 script: "curl -s -o /dev/null -w '%{http_code}' ${SONAR_URL}/api/system/status",
-        //                 returnStdout: true
-        //             ).trim()
+        /*
+        stage('2. SAST — SonarQube') {
+            steps {
+                script {
+                    def sonarStatus = sh(
+                        script: "curl -s -o /dev/null -w '%{http_code}' ${SONAR_URL}/api/system/status",
+                        returnStdout: true
+                    ).trim()
 
-        //             if (sonarStatus != '200') {
-        //                 error "SonarQube not reachable at ${SONAR_URL} (HTTP ${sonarStatus}). Is the pod running and port-forwarded?"
-        //             }
+                    if (sonarStatus != '200') {
+                        error "SonarQube not reachable at ${SONAR_URL} (HTTP ${sonarStatus}). Is the pod running and port-forwarded?"
+                    }
 
-        //             sh """
-        //                 mvn sonar:sonar \
-        //                   -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-        //                   -Dsonar.projectName=${SONAR_PROJECT_KEY} \
-        //                   -Dsonar.host.url=${SONAR_URL} \
-        //                   -Dsonar.login=${env.SONAR_TOKEN} \
-        //                   -Dsonar.java.binaries=target/classes \
-        //                   -Dsonar.sources=src/main/java \
-        //                   -Dsonar.tests=src/test/java
-        //             """
+                    sh """
+                        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+                        export PATH=\$JAVA_HOME/bin:\$PATH
+                        mvn sonar:sonar \
+                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                          -Dsonar.projectName=${SONAR_PROJECT_KEY} \
+                          -Dsonar.host.url=${SONAR_URL} \
+                          -Dsonar.login=${env.SONAR_TOKEN} \
+                          -Dsonar.java.binaries=target/classes \
+                          -Dsonar.sources=src/main/java \
+                          -Dsonar.tests=src/test/java
+                    """
 
-        //             // Wait for SonarQube quality gate result
-        //             sleep(time: 30, unit: 'SECONDS')
+                    sleep(time: 30, unit: 'SECONDS')
 
-        //             def qgResponse = sh(
-        //                 script: """
-        //                     curl -s -u ${env.SONAR_TOKEN}: \
-        //                     "${SONAR_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}" \
-        //                     | python3 -c "import sys,json; print(json.load(sys.stdin)['projectStatus']['status'])"
-        //                 """,
-        //                 returnStdout: true
-        //             ).trim()
+                    def qgResponse = sh(
+                        script: """
+                            curl -s -u ${env.SONAR_TOKEN}: \
+                            "${SONAR_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}" \
+                            | python3 -c "import sys,json; print(json.load(sys.stdin)['projectStatus']['status'])"
+                        """,
+                        returnStdout: true
+                    ).trim()
 
-        //             echo "SonarQube Quality Gate: ${qgResponse}"
+                    echo "SonarQube Quality Gate: ${qgResponse}"
 
-        //             if (qgResponse == 'ERROR') {
-        //                 error "SonarQube Quality Gate FAILED. Fix code issues before proceeding."
-        //             }
-        //         }
-        //     }
-        // }
+                    if (qgResponse == 'ERROR') {
+                        error "SonarQube Quality Gate FAILED. Fix code issues before proceeding."
+                    }
+                }
+            }
+        }
+        */
 
         // ─────────────────────────────────────────
         // STAGE 3 — SCA: OWASP Dependency Check
         // ─────────────────────────────────────────
         stage('3. SCA — OWASP Dependency Check') {
             steps {
-                sh 'mkdir -p dependency-check-report'   // ✅ FIX
+                sh 'mkdir -p dependency-check-report'
 
                 dependencyCheck(
                     additionalArguments: """
@@ -150,14 +160,12 @@ pipeline {
                 script {
                     def fullImage = "${ECR_URL}/${IMAGE_REPO}:${IMAGE_TAG}"
 
-                    // Build Docker image
                     sh "docker build -t ${fullImage} ."
 
-                    // Trivy — scan for CRITICAL vulnerabilities BEFORE push
-                    // --exit-code 1 means pipeline fails if CRITICAL found
+                    // Block pipeline if CRITICAL vulnerabilities found
                     sh """
                         trivy image \
-                          --exit-code 0 \
+                          --exit-code 1 \
                           --severity CRITICAL \
                           --no-progress \
                           --format table \
@@ -165,7 +173,7 @@ pipeline {
                           ${fullImage}
                     """
 
-                    // Also generate a full HTML report for archiving
+                    // Full report for all severities — archived for review
                     sh """
                         trivy image \
                           --exit-code 0 \
@@ -173,6 +181,7 @@ pipeline {
                           --no-progress \
                           --format json \
                           --output trivy-report.json \
+                          --timeout 10m \
                           ${fullImage}
                     """
 
@@ -190,37 +199,43 @@ pipeline {
                 script {
                     def fullImage = "${ECR_URL}/${IMAGE_REPO}:${IMAGE_TAG}"
 
-                    // ✅ Create ECR repo if not exists
+                    // Create ECR repo if it doesn't exist yet
                     sh """
                         aws ecr describe-repositories \
-                        --repository-names ${IMAGE_REPO} \
-                        --region ${AWS_REGION} >/dev/null 2>&1 || \
+                          --repository-names ${IMAGE_REPO} \
+                          --region ${AWS_REGION} >/dev/null 2>&1 || \
                         aws ecr create-repository \
-                        --repository-name ${IMAGE_REPO} \
-                        --region ${AWS_REGION}
+                          --repository-name ${IMAGE_REPO} \
+                          --region ${AWS_REGION}
                     """
 
-                    // Login to ECR
+                    // Enable ECR native scan on push
+                    sh """
+                        aws ecr put-image-scanning-configuration \
+                          --repository-name ${IMAGE_REPO} \
+                          --image-scanning-configuration scanOnPush=true \
+                          --region ${AWS_REGION}
+                    """
+
+                    // Login and push
                     sh """
                         aws ecr get-login-password --region ${AWS_REGION} | \
                         docker login --username AWS --password-stdin ${ECR_URL}
+                        docker push ${fullImage}
                     """
 
-                    // Push image
-                    sh "docker push ${fullImage}"
-
-                    // Wait for scan
-                    echo "Waiting 60s for ECR native scan to complete..."
+                    // Wait for ECR native scan to complete
+                    echo "Waiting 60s for ECR native scan..."
                     sleep(time: 60, unit: 'SECONDS')
 
-                    // Print scan results
+                    // Print ECR scan results (informational only)
                     sh """
                         SCAN_STATUS=\$(aws ecr describe-image-scan-findings \
-                        --repository-name ${IMAGE_REPO} \
-                        --image-id imageTag=${IMAGE_TAG} \
-                        --region ${AWS_REGION} \
-                        --query 'imageScanFindings.findingSeverityCounts' \
-                        --output json 2>/dev/null || echo '{}')
+                          --repository-name ${IMAGE_REPO} \
+                          --image-id imageTag=${IMAGE_TAG} \
+                          --region ${AWS_REGION} \
+                          --query 'imageScanFindings.findingSeverityCounts' \
+                          --output json 2>/dev/null || echo '{}')
                         echo "ECR Scan Results: \$SCAN_STATUS"
                     """
                 }
@@ -236,16 +251,13 @@ pipeline {
                     git config --global user.email "jenkins@rohandevops.co.in"
                     git config --global user.name "Jenkins-CI"
 
-                    # Clean any previous clone
                     rm -rf sspringboot-bankapp
 
                     git clone https://${env.GIT_TOKEN}@github.com/rohandeb2/sspringboot-bankapp.git
                     cd sspringboot-bankapp
 
-                    # Update image tag in values-prod.yaml
                     sed -i 's/tag: .*/tag: "${IMAGE_TAG}"/' banking-app/values-prod.yaml
 
-                    # Verify the change was made
                     grep "tag:" banking-app/values-prod.yaml
 
                     git add banking-app/values-prod.yaml
@@ -263,7 +275,7 @@ pipeline {
     post {
 
         success {
-            echo "Pipeline completed successfully — image ${IMAGE_TAG} deployed to EKS via ArgoCD"
+            echo "Pipeline completed — image ${IMAGE_TAG} pushed, ArgoCD will deploy automatically"
             emailext(
                 subject: "SUCCESS: ${env.JOB_NAME} [Build #${env.BUILD_NUMBER}]",
                 body: """
@@ -271,8 +283,9 @@ pipeline {
                     <p><b>Job:</b> ${env.JOB_NAME}</p>
                     <p><b>Build:</b> #${env.BUILD_NUMBER}</p>
                     <p><b>Image:</b> ${ECR_URL}/${IMAGE_REPO}:${IMAGE_TAG}</p>
+                    <p><b>Triggered by:</b> GitHub push to main</p>
                     <p><b>Console:</b> <a href='${env.BUILD_URL}'>${env.BUILD_URL}</a></p>
-                    <p>ArgoCD will automatically sync and deploy the new image.</p>
+                    <p>ArgoCD will automatically detect the new image tag and deploy to EKS.</p>
                 """,
                 to: "ruhondeb28@gmail.com",
                 from: "jenkins@rohandevops.co.in",
@@ -282,7 +295,6 @@ pipeline {
 
         failure {
             script {
-                // AI Root Cause Analysis using Gemini
                 sh """
                     curl -s "${env.BUILD_URL}consoleText" | \
                     GEMINI_API_KEY=${env.GEMINI_KEY} \
@@ -297,6 +309,7 @@ pipeline {
                         <h3>Build Failed</h3>
                         <p><b>Job:</b> ${env.JOB_NAME}</p>
                         <p><b>Build:</b> #${env.BUILD_NUMBER}</p>
+                        <p><b>Triggered by:</b> GitHub push to main</p>
                         <p><b>Console:</b> <a href='${env.BUILD_URL}'>${env.BUILD_URL}</a></p>
                         <hr>
                         <h4>AI Root Cause Analysis</h4>
@@ -310,7 +323,6 @@ pipeline {
         }
 
         always {
-            // Clean workspace after every build
             cleanWs()
         }
     }
