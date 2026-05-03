@@ -10,13 +10,13 @@ spec:
     chart: gateway
     targetRevision: 1.22.0
     helm:
-      values: |
-        service:
-          type: LoadBalancer
-          annotations:
-            service.beta.kubernetes.io/aws-load-balancer-type: "external"
-            service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
-            service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+    values: |
+      service:
+        type: LoadBalancer
+        annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: "external"
+          service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
+          service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
         autoscaling:
           enabled: true
           minReplicas: 1

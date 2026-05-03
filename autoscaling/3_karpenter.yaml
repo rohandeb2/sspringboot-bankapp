@@ -27,7 +27,6 @@ spec:
             eks.amazonaws.com/role-arn: arn:aws:iam::959589242185:role/bankapp-karpenter-controller-irsa
         settings:
           clusterName: bankapp-prod-eks
-          interruptionQueue: bankapp-karpenter-interruption
           featureGates:
             drift: true
         controller:

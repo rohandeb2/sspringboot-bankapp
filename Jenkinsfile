@@ -58,7 +58,11 @@ pipeline {
         // ─────────────────────────────────────────
         stage('1. Build & Package') {
             steps {
-                sh "mvn clean package -DskipTests -Dmaven.wagon.http.retryHandler.count=3"
+                sh """
+                    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+                    export PATH=\$JAVA_HOME/bin:\$PATH
+                    mvn clean package -DskipTests -Dmaven.wagon.http.retryHandler.count=3
+                """
             }
         }
 

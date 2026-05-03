@@ -7,7 +7,7 @@ environment  = "prod"
 
 region = "us-east-1"
 
-kms_key_arn = "arn:aws:kms:us-east-1:959589242185:key/0463764f-bc03-4585-98f7-5b9410d21342"
+kms_key_arn = "arn:aws:kms:us-east-1:959589242185:key/028b38f7-c041-4058-8bb3-2a30e9d4ded8"
 
 # Standard Tagging Policy
 common_tags = {
