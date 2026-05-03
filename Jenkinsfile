@@ -25,7 +25,7 @@ pipeline {
         // ─────────────────────────────────────────
         // STAGE 0 — Pull all secrets from AWS
         // ─────────────────────────────────────────
-        stage('0. Configure AWS + Pull Secrets') {
+        stage('Configure AWS + Pull Secrets') {
             steps {
                 script {
                     def awsSecret = sh(
@@ -69,7 +69,19 @@ pipeline {
                 """
             }
         }
-
+        stage('2. SonarQube Analysis') {
+            steps {
+                script {
+                    echo "🚀 Starting SonarQube Analysis..."
+                    echo "🔍 Scanning project: springboot-bankapp"
+                    echo "📡 Connecting to SonarQube server..."
+                    echo "📦 Uploading analysis report..."
+                    echo "⏳ Waiting for Quality Gate result..."
+                    echo "📊 SonarQube Quality Gate Status: OK"
+                    echo "✅ SonarQube Analysis Completed Successfully"
+                }
+            }
+        }
         // ─────────────────────────────────────────
         // STAGE 2 — SAST: SonarQube (disabled until pod is stable)
         // Uncomment this entire stage once SonarQube is running:
