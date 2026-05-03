@@ -11,11 +11,13 @@ spec:
     targetRevision: 5.2.0
     helm:
       values: |
+        replicas: 1
+        mode: standalone
         rootUser: "rohan-admin"
         rootPassword: "secure-storage-pass"
         persistence:
           enabled: true
-          size: 50Gi
+          size: 20Gi
         buckets:
           - name: velero-backups
             policy: none
@@ -36,5 +38,9 @@ spec:
     server: https://kubernetes.default.svc
     namespace: velero
   syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
