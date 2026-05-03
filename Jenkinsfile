@@ -60,7 +60,7 @@ pipeline {
         // ─────────────────────────────────────────
         // STAGE 1 — Build
         // ─────────────────────────────────────────
-        stage('1. Build & Package') {
+        stage('Build & Package') {
             steps {
                 sh """
                     export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
@@ -78,7 +78,7 @@ pipeline {
         //   curl http://localhost:9000/api/system/status → {"status":"UP"}
         // ─────────────────────────────────────────
         /*
-        stage('2. SAST — SonarQube') {
+        stage('SAST — SonarQube') {
             steps {
                 script {
                     def sonarStatus = sh(
@@ -127,7 +127,7 @@ pipeline {
         // ─────────────────────────────────────────
         // STAGE 3 — SCA: OWASP Dependency Check
         // ─────────────────────────────────────────
-        stage('3. SCA — OWASP Dependency Check') {
+        stage('SCA — OWASP Dependency Check') {
             steps {
                 sh 'mkdir -p dependency-check-report'
 
@@ -155,7 +155,7 @@ pipeline {
         // ─────────────────────────────────────────
         // STAGE 4 — Docker Build + Trivy Scan
         // ─────────────────────────────────────────
-        stage('4. Docker Build + Trivy Scan') {
+        stage('Docker Build + Trivy Scan') {
             steps {
                 script {
                     def fullImage = "${ECR_URL}/${IMAGE_REPO}:${IMAGE_TAG}"
@@ -194,7 +194,7 @@ pipeline {
         // ─────────────────────────────────────────
         // STAGE 5 — Push to ECR + ECR Native Scan
         // ─────────────────────────────────────────
-        stage('5. Push to ECR') {
+        stage('Push to ECR') {
             steps {
                 script {
                     def fullImage = "${ECR_URL}/${IMAGE_REPO}:${IMAGE_TAG}"
@@ -245,7 +245,7 @@ pipeline {
         // ─────────────────────────────────────────
         // STAGE 6 — GitOps: Update image tag
         // ─────────────────────────────────────────
-        stage('6. GitOps — Update Image Tag') {
+        stage('GitOps — Update Image Tag') {
             steps {
                 sh """
                     git config --global user.email "jenkins@rohandevops.co.in"
