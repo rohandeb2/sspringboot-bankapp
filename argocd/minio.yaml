@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: minio
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://charts.min.io
+    chart: minio
+    targetRevision: 5.2.0
+    helm:
+      values: |
+        replicas: 1
+        mode: standalone
+        rootUser: "rohan-admin"
+        rootPassword: "secure-storage-pass"
+        persistence:
+          enabled: true
+          size: 20Gi
+        buckets:
+          - name: velero-backups
+            policy: none
+            purge: false
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 250m
+          limits:
+            memory: 1Gi
+            cpu: 500m
+        securityContext:
+          enabled: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          fsGroup: 1000
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: velero
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
