@@ -306,32 +306,19 @@ pipeline {
         }
 
         failure {
-            script {
-                sh """
-                    curl -s "${env.BUILD_URL}consoleText" | \
-                    GEMINI_API_KEY=${env.GEMINI_KEY} \
-                    python3 /var/lib/jenkins/scripts/ai_rca.py > ai_report.txt 2>/dev/null || \
-                    echo "AI RCA unavailable" > ai_report.txt
-                """
-                def aiReport = readFile('ai_report.txt').take(2000)
-
-                emailext(
-                    subject: "FAILURE: ${env.JOB_NAME} [Build #${env.BUILD_NUMBER}]",
-                    body: """
-                        <h3>Build Failed</h3>
-                        <p><b>Job:</b> ${env.JOB_NAME}</p>
-                        <p><b>Build:</b> #${env.BUILD_NUMBER}</p>
-                        <p><b>Triggered by:</b> GitHub push to main</p>
-                        <p><b>Console:</b> <a href='${env.BUILD_URL}'>${env.BUILD_URL}</a></p>
-                        <hr>
-                        <h4>AI Root Cause Analysis</h4>
-                        <pre>${aiReport}</pre>
-                    """,
-                    to: "ruhondeb28@gmail.com",
-                    from: "jenkins@rohandevops.co.in",
-                    mimeType: 'text/html'
-                )
-            }
+            emailext(
+                subject: "FAILURE: ${env.JOB_NAME} [Build #${env.BUILD_NUMBER}]",
+                body: """
+                    <h3>Build Failed</h3>
+                    <p><b>Job:</b> ${env.JOB_NAME}</p>
+                    <p><b>Build:</b> #${env.BUILD_NUMBER}</p>
+                    <p><b>Console:</b> <a href='${env.BUILD_URL}'>${env.BUILD_URL}</a></p>
+                    <p>Check the console output link above for the full error details.</p>
+                """,
+                to: "ruhondeb28@gmail.com",
+                from: "jenkins@rohandevops.co.in",
+                mimeType: 'text/html'
+            )
         }
 
         always {
