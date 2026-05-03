@@ -1,0 +1,75 @@
+# It installs a fully working SonarQube stack (app + database + storage + ingress) into your cluster and makes it GitOps-managed.
+# This file gives you:
+
+# ✔ SonarQube deployed via GitOps (ArgoCD)
+# ✔ PostgreSQL database automatically installed
+# ✔ Persistent storage for reports & plugins
+# ✔ External access via domain
+# ✔ Resource-controlled stable deployment
+# ✔ Fully automated CI/CD security scanner backend
+
+# These file deploy SonarQube, which is a code quality and security analysis tool, using ArgoCD.
+
+apiVersion: argoproj.io/v1alpha1  # CRD version for ArgoCD Application
+kind: Application                 # Defines this resource as an ArgoCD Application
+metadata:
+  name: sonarqube                  # Name of the ArgoCD application
+  namespace: argocd                # Namespace where ArgoCD manages this application
+
+spec:
+  project: default                 # ArgoCD project this app belongs to (default project)
+
+  source:
+    repoURL: https://sonarsource.github.io/helm-chart-sonarqube  # Helm chart repository URL
+    chart: sonarqube               # Name of the Helm chart to deploy
+    targetRevision: 10.0.0          # Chart version to deploy
+    helm:
+      values: |                    # Inline Helm values (custom configuration for SonarQube)
+        
+        # 1️⃣ Database Configuration (PostgreSQL)
+        postgresql:
+          enabled: true            # Deploy a PostgreSQL database along with SonarQube
+          postgresqlPassword: "rohan-secure-pass" # Password for DB (use Secret in production)
+          persistence:
+            size: 20Gi             # Persistent storage size for PostgreSQL data
+
+        # 2️⃣ Persistence for SonarQube Data
+        persistence:
+          enabled: true            # Enable persistent volume for SonarQube application data
+          size: 10Gi               # Storage size for SonarQube data (plugins, logs, etc.)
+
+        # 3️⃣ Resource Requests and Limits
+        resources:
+          requests:
+            memory: "2Gi"          # Minimum memory guaranteed for the pod
+            cpu: "1"               # Minimum CPU guaranteed for the pod
+          limits:
+            memory: "4Gi"          # Maximum memory the pod can consume
+            cpu: "2"               # Maximum CPU the pod can consume
+
+        # 4️⃣ Ingress (Expose SonarQube externally)
+        ingress:
+          enabled: true            # Enable Kubernetes Ingress for external access
+          hosts:
+            - name: sonarqube.rohandevops.co.in # DNS hostname for accessing SonarQube
+
+  destination:
+    server: https://kubernetes.default.svc  # Kubernetes API server to deploy to (current cluster)
+    namespace: devsecops                     # Namespace where SonarQube will be deployed
+
+  syncPolicy:
+    automated:                             # Enable automated sync
+      prune: true                           # Delete resources removed from Git/Helm
+      selfHeal: true                        # Automatically revert changes outside of Git
+    syncOptions:
+      - CreateNamespace=true                # Automatically create the namespace if it does not exist'
+
+# This ArgoCD YAML:
+
+# Installs SonarQube into your Kubernetes cluster.
+# Creates persistence for the database and SonarQube data (plugins, logs, scan results).
+# Allocates CPU/memory resources for stable operation.
+# Exposes SonarQube via Ingress so your CI/CD pipelines or humans can access the dashboard.
+
+# But it doesn’t scan any code by itself. The actual code analysis is triggered separately from your CI/CD pipeline 
+# (GitHub Actions, Jenkins, GitLab CI, etc.) using sonar-scanner or similar tools, pointing to this SonarQube instance.
