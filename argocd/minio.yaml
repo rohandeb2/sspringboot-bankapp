@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: minio
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/rohandeb2/sspringboot-bankapp
+    targetRevision: HEAD
+    path: disaster-recovery/manifests
+    directory:
+      recurse: false
+      include: 2_minio-stack.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: velero
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
