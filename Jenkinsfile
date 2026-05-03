@@ -310,7 +310,7 @@ pipeline {
                 sh """
                     curl -s "${env.BUILD_URL}consoleText" | \
                     GEMINI_API_KEY=${env.GEMINI_KEY} \
-                    python3 scripts/ai_rca.py > ai_report.txt 2>/dev/null || \
+                    python3 /var/lib/jenkins/scripts/ai_rca.py > ai_report.txt 2>/dev/null || \
                     echo "AI RCA unavailable" > ai_report.txt
                 """
                 def aiReport = readFile('ai_report.txt').take(2000)
