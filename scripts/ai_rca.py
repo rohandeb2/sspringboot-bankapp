@@ -1,39 +1,44 @@
-# It takes:
-# ✔ Jenkins build logs
-# ✔ Sends them to Google Gemini AI
-# ✔ Gets back:
+import os
+import requests
+import sys
+import json
 
-# Root cause of failure
-# Suggested fix
+def analyze_logs(log_text):
+    api_key = os.getenv("GEMINI_API_KEY")
 
-# 👉 Then prints AI analysis in terminal / Jenkins pipeline
+    if not api_key or api_key == "None":
+        return "ERROR: GEMINI_API_KEY not set or empty"
 
-# Pre-requisites & Local Setup
-# Before we start, ensure your local environment is ready:
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + api_key
 
-# Python 3.x installed (for the AI scripts).
+    prompt = (
+        "You are a DevOps expert. Analyze these Jenkins CI/CD pipeline logs for a Spring Boot banking app.\n"
+        "Provide:\n"
+        "1. ROOT CAUSE: What exactly failed and why\n"
+        "2. FAILED STAGE: Which pipeline stage failed\n"
+        "3. FIX: Exact steps to resolve it\n\n"
+        f"LOGS:\n{log_text[-3000:]}"
+    )
 
-# AWS CLI configured with the same account used in your Jenkinsfile.
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
 
-# Gemini API Key: Get one from Google AI Studio.
+    try:
+        response = requests.post(url, json=payload, timeout=30)
+        data = response.json()
 
+        if "candidates" not in data:
+            error_msg = data.get("error", {}).get("message", str(data))
+            return f"Gemini API error: {error_msg}"
 
-# it takes jenkins logs as input, sends them to Google Gemini API, and prints root cause + fix
-import os     #Used to access environment variables
-import requests    #Used to make HTTP API calls
-import sys       #Used to handle input/output from terminal
+        return data["candidates"][0]["content"]["parts"][0]["text"]
 
-def analyze_logs(log_text):      # create a function that takes log text as input
-    api_key = os.getenv("GEMINI_API_KEY")    # Reads API key from environment variable
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"  # build request URL for Gemini API
-    
-    prompt = f"Analyze these Jenkins logs for a Spring Boot banking app. Identify the root cause of failure and suggest a fix:\n\n{log_text[-2000:]}"    #This is what you send to AI
-    
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}   #Format required by Gemini API
-    response = requests.post(url, json=payload)               #Sends POST request to Gemini
-    return response.json()['candidates'][0]['content']['parts'][0]['text']      #Converts response to JSON then extracts candidates[0] → first AI answer -> content → parts → text → actual message
+    except Exception as e:
+        return f"Script exception: {str(e)}"
 
-if __name__ == "__main__":   #This block runs when you execute the script
-    logs = sys.stdin.read()     #Reads input from terminal / pipeline
+if __name__ == "__main__":
+    logs = sys.stdin.read()
+    if not logs.strip():
+        print("No logs received on stdin")
+        sys.exit(1)
     print("--- AI ROOT CAUSE ANALYSIS ---")
-    print(analyze_logs(logs))   # it call function and pass the logs
+    print(analyze_logs(logs))
