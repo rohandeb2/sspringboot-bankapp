@@ -10,6 +10,7 @@ spec:
     chart: gateway
     targetRevision: 1.22.0
     helm:
+      skipSchemaValidation: true
       values: |
         service:
           type: LoadBalancer
