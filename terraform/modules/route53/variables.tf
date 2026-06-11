@@ -12,18 +12,3 @@ variable "alb_zone_id" {
   description = "Hosted zone ID of the ALB"
   type        = string
 }
-
-# variable "certificate_arn" {
-#   description = "ARN of the ACM certificate"
-#   type        = string
-# }
-
-# variable "acm_domain_validation_options" {
-#   description = "Domain validation options from ACM certificate"
-#   type = list(object({
-#     domain_name           = string
-#     resource_record_name  = string
-#     resource_record_value = string
-#     resource_record_type  = string
-#   }))
-# }

@@ -1,7 +1,7 @@
 name: "Terraform 01 - Infrastructure Bootstrap"
 
 on:
-  workflow_dispatch: # Allows manual trigger only - prevents accidental runs
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -30,7 +30,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
-      # Provision S3 Bucket First
       - name: Terraform Init & Apply (S3)
         working-directory: ${{ env.TF_S3 }}
         run: |
@@ -38,7 +37,6 @@ jobs:
           terraform plan
           terraform apply -auto-approve -var-file=../../prod/terraform.tfvars
 
-      # Provision DynamoDB Lock Table Second
       - name: Terraform Init & Apply (DynamoDB)
         working-directory: ${{ env.TF_DDB }}
         run: |

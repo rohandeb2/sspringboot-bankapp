@@ -1,17 +1,3 @@
-# It generates a signed HTTPS certificate for the VPA webhook service:
-
-# 🔐 Enables secure communication between Kubernetes API server and VPA webhook using your internal CA.
-
-# 🚨 Why this is critical
-
-# Without this:
-
-# ❌ Kubernetes API cannot trust VPA webhook
-# ❌ admission requests fail
-# ❌ VPA stops working
-# ❌ pod scaling/recommendation breaks
-
-
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -33,7 +19,6 @@ spec:
     name: vpa-ca-issuer
     kind: Issuer
     group: cert-manager.io
-  # usages required for a TLS server cert
   usages:
     - server auth
     - digital signature

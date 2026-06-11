@@ -1,12 +1,3 @@
-# This deploys Karpenter, a Kubernetes node autoscaler that creates and deletes EC2 instances automatically based on workload demand.
-
-# Karpenter continuously:
-
-# ✔ Watches pending pods
-# ✔ Detects insufficient cluster capacity
-# ✔ Provisions new EC2 nodes automatically
-# ✔ Terminates underutilized nodes
-
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -15,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: public.ecr.aws/karpenter      # was: https://charts.karpenter.sh (old, broken repo)
+    repoURL: public.ecr.aws/karpenter      
     chart: karpenter
-    targetRevision: 1.3.3                  # was: 0.37.0 (doesn't exist in any repo)
+    targetRevision: 1.3.3                  
     helm:
       values: |
         serviceAccount:

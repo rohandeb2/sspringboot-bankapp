@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: kiali-server
-  namespace: argocd                        # was: istio-system — ArgoCD Applications always live in argocd namespace
+  namespace: argocd                       
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
@@ -39,7 +39,7 @@ spec:
               enabled: true
   destination:
     server: https://kubernetes.default.svc
-    namespace: istio-system                # Kiali deploys INTO istio-system, that's correct
+    namespace: istio-system              
   syncPolicy:
     automated:
       prune: true

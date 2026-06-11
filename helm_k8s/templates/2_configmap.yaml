@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: {{ include "banking.fullname" . }}-config
+  namespace: {{ .Values.namespace }}
+
+  labels:
+    {{- include "banking.labels" . | nindent 4 }}
+
+data:
+  SPRING_PROFILES_ACTIVE: {{ .Values.config.springProfile | default "prod" | quote }}
+  LOG_LEVEL: {{ .Values.config.logLevel | default "INFO" | quote }}
+
+  DB_HOST: {{ .Values.config.dbHost | quote }}
+  DB_PORT: {{ .Values.config.dbPort | default "3306" | quote }}
+  DB_NAME: {{ .Values.config.dbName | quote }}
+
+  ENABLE_TRANSACTION_LIMITS: "true"
+  MAX_DAILY_TRANSFER: "50000"

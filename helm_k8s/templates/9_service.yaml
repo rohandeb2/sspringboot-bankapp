@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ include "banking.fullname" . }}-active
+  namespace: {{ .Values.namespace }}
+
+  labels:
+    {{- include "banking.labels" . | nindent 4 }}
+
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/actuator/prometheus"
+    prometheus.io/port: "8080"
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: {{ include "banking.fullname" . }}
+
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+
+---
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ include "banking.fullname" . }}-preview
+  namespace: {{ .Values.namespace }}
+
+  labels:
+    {{- include "banking.labels" . | nindent 4 }}
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: {{ include "banking.fullname" . }}
+
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http

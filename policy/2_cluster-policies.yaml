@@ -1,70 +1,51 @@
-#This is a Kyverno ClusterPolicy that enforces security and resource rules in your Kubernetes cluster.
-# This file enforces:
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
 
-# ✔ Mandatory CPU/memory limits
-# ✔ No root containers in production
-# ✔ Cluster-wide security baseline
-# ✔ Real-time + background policy enforcement
-# ✔ Prevention of unsafe workloads before deployment
-
-apiVersion: kyverno.io/v1  # API version for Kyverno policies
-kind: ClusterPolicy  # Cluster-wide policy (applies to entire Kubernetes cluster)
 metadata:
-  name: banking-guardrails  # Name of the policy (used to identify and manage it)
+  name: banking-guardrails
+
 spec:
-  validationFailureAction: Enforce  # Blocks resource creation if policy is violated (strict mode)
-  background: true  # Enables background scans of existing resources for violations
+  validationFailureAction: Enforce
+  background: true
+
   rules:
-    # RULE 1: Protect Karpenter from "Infinite Scaling"
-    - name: check-resource-limits  # Name of this validation rule
+    - name: check-resource-limits
       match:
         any:
-        - resources:
-            kinds:
-            - Pod  # Applies this rule to Pods
-            namespaces:
-            - banking-prod  # Only applies in this namespace
-      validate:  # Validation logic for this rule->Check if the resource follows the rule
-        message: "Resource limits are REQUIRED so Karpenter can scale efficiently."  # Error message if rule fails
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - banking-prod
+      validate:
+        message: Resource limits are required.
         pattern:
           spec:
             containers:
-            - resources:
-                limits:
-                  cpu: "?*"  # "?*" -> This field MUST exist and must have some value
-                  memory: "?*"  # Ensures memory limit is defined
-
-    # RULE 2: Security - No Root Access
-    - name: disallow-root-user  # Name of this security rule
+              - resources:
+                  limits:
+                    cpu: "?*"
+                    memory: "?*"
+    - name: disallow-root-user
       match:
         any:
-        - resources:
-            kinds:
-            - Pod  # Applies to all Pods
+          - resources:
+              kinds:
+                - Pod
       exclude:
         any:
-        - resources:
-            namespaces:
-            - monitoring
-            - velero
-            - kyverno
-            - kube-system
-            - argocd
-            - jenkins
-            - istio-system
+          - resources:
+              namespaces:
+                - monitoring
+                - velero
+                - kyverno
+                - kube-system
+                - argocd
+                - jenkins
+                - istio-system
       validate:
-        message: "Running as root is forbidden in the Banking Cluster."  # Error message if rule fails
+        message: Running containers as root is not allowed.
         pattern:
           spec:
             securityContext:
-              runAsNonRoot: true  # Ensures containers do NOT run as root user
-
-
-
-      # You can add more rules here to enforce other policies like:
-      # image tag restrictions (no :latest)
-      # required labels
-      # namespace isolation
-      # disallow privileged containers
-      # security context enforcement
-      # network policies
+              runAsNonRoot: true

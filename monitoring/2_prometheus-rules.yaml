@@ -1,216 +1,188 @@
-# It defines custom monitoring + alert rules that Prometheus continuously evaluates.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
 
-# If something goes wrong in your cluster → it triggers alerts via Alertmanager.
-
-# THis file is an argocd application that deploys the PrometheusRule CRD which defines custom alerting rules for our Prometheus monitoring setup.
-# By managing this as an ArgoCD application, we can version control our alerting rules
-
-apiVersion: monitoring.coreos.com/v1  # Prometheus Operator CRD API version
-kind: PrometheusRule  # Defines alerting/recording rules for Prometheus
 metadata:
-  name: banking-app-alerts  # Name of the alert rule set
-  namespace: monitoring  # Namespace where Prometheus is running
+  name: banking-app-alerts
+  namespace: monitoring
+
   labels:
-    release: kube-prometheus-stack  # Must match Helm release label for auto-discovery
+    release: kube-prometheus-stack
 
 spec:
-  groups:  # Logical grouping of alert rules
+  groups:
 
-  # ---------------------------
-  # 🔹 1. SERVICE AVAILABILITY
-  # ---------------------------
-  - name: service-availability  # Group for uptime checks
-    rules:
-    - alert: ServiceDown  # Alert name
-      expr: up{app=~".*banking-platform"} == 0   # it checks if any instance of the banking-platform application is down (up=0 means not reachable)
-                                                 # the app=~".*banking-platform" is a regex that matches any app labe name --> in this place the name should come 
-                                                #  from chart.yaml {name} + argocd applciaiton metdata name like chart.yaml name is banking-api and argocd application name is banking-platform 
-                                                #  and the applicaiton name is banking-api then the final name shoud be banking-api-bannking-platform
-      for: 1m  # Fire alert if condition persists for 1 minute
-      labels:
-        severity: critical  # High priority alert
-      annotations:
-        summary: "Service Down"  # Short alert message
-        description: "Banking service is not reachable."  # Detailed message
+    - name: service-availability
+      rules:
+        - alert: ServiceDown
+          expr: up{app=~".*banking-platform"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Service Down"
+            description: "Banking service is not reachable."
 
-  # ---------------------------
-  # 🔹 2. ERROR RATE
-  # ---------------------------
-  - name: application-errors  # Group for app error monitoring
-    rules:
-    - alert: HighErrorRate  # Alert for high 5xx errors
-      expr: |  # Multi-line PromQL expression
-        (
-          rate(http_server_requests_seconds_count{application=~".*banking-platform", status=~"5.."}[5m])  # 5xx error rate
-          /
-          rate(http_server_requests_seconds_count{application=~".*banking-platform"}[5m])  # Total request rate
-        ) > 0.05  # Threshold >5% errors
-      for: 2m  # Must persist for 2 minutes
-      labels:
-        severity: critical  # Critical issue
-      annotations:
-        summary: "High Error Rate"  # Alert summary
-        description: "5xx error rate is above 5%."  # Explanation
+    - name: application-errors
+      rules:
+        - alert: HighErrorRate
+          expr: |
+            (
+              rate(http_server_requests_seconds_count{
+                application=~".*banking-platform",
+                status=~"5.."
+              }[5m])
+              /
+              rate(http_server_requests_seconds_count{
+                application=~".*banking-platform"
+              }[5m])
+            ) > 0.05
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High Error Rate"
+            description: "5xx error rate is above 5%."
 
-  # ---------------------------
-  # 🔹 3. LATENCY
-  # ---------------------------
-  - name: latency  # Group for latency monitoring
-    rules:
-    - alert: HighLatency  # Alert for slow responses
-      expr: |  # Multi-line query
-        histogram_quantile(0.95,  # Calculate P95 latency
-          rate(http_server_requests_seconds_bucket{application=~".*banking-platform"}[5m])  # Histogram buckets over 5m
-        ) > 1.5  # Threshold >1.5 seconds
-      for: 5m  # Sustained latency for 5 minutes
-      labels:
-        severity: warning  # Medium priority
-      annotations:
-        summary: "High API Latency"  # Short description
-        description: "P95 latency is above threshold."  # Details
+    - name: latency
+      rules:
+        - alert: HighLatency
+          expr: |
+            histogram_quantile(
+              0.95,
+              rate(http_server_requests_seconds_bucket{
+                application=~".*banking-platform"
+              }[5m])
+            ) > 1.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High API Latency"
+            description: "P95 latency is above threshold."
 
-  # ---------------------------
-  # 🔹 4. CPU / MEMORY
-  # ---------------------------
-  - name: resource-usage  # Resource monitoring group
-    rules:
-    - alert: HighCPUUsage  # CPU usage alert
-      expr: rate(container_cpu_usage_seconds_total{container="banking-api"}[5m]) > 0.8  # CPU usage >80% and the banking-api comes from the rollout.yaml file in the spec: container.name
-      for: 5m  # Persist for 5 minutes
-      labels:
-        severity: warning  # Warning level
-      annotations:
-        summary: "High CPU Usage"  # Alert message
+    - name: resource-usage
+      rules:
+        - alert: HighCPUUsage
+          expr: rate(container_cpu_usage_seconds_total{container="banking-api"}[5m]) > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU Usage"
 
-    - alert: HighMemoryUsage  # Memory usage alert
-      expr: (container_memory_working_set_bytes{container="banking-api"} / container_spec_memory_limit_bytes{container="banking-api"}) > 0.85  # Memory >85%
-      for: 5m  # Persist for 5 minutes
-      labels:
-        severity: critical  # Critical alert
-      annotations:
-        summary: "High Memory Usage"  # Alert message
+        - alert: HighMemoryUsage
+          expr: |
+            (
+              container_memory_working_set_bytes{container="banking-api"}
+              /
+              container_spec_memory_limit_bytes{container="banking-api"}
+            ) > 0.85
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High Memory Usage"
 
-  # ---------------------------
-  # 🔹 5. KUBERNETES HEALTH
-  # ---------------------------
-  - name: kubernetes-health  # Cluster health monitoring
-    rules:
-    - alert: NodeNotReady  # Node health alert
-      expr: kube_node_status_condition{condition="Ready",status="true"} == 0  # Node not ready
-      for: 5m  # Persist for 5 minutes
-      labels:
-        severity: critical  # Critical issue
+    - name: kubernetes-health
+      rules:
+        - alert: NodeNotReady
+          expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+          for: 5m
+          labels:
+            severity: critical
 
-    - alert: PodCrashLooping  # Pod restart alert
-      expr: increase(kube_pod_container_status_restarts_total[10m]) > 3  # More than 3 restarts in 10 mins
-      for: 5m  # Persist
-      labels:
-        severity: warning  # Warning level
+        - alert: PodCrashLooping
+          expr: increase(kube_pod_container_status_restarts_total[10m]) > 3
+          for: 5m
+          labels:
+            severity: warning
 
-    - alert: PodNotReady  # Pod readiness issue
-      expr: kube_pod_status_ready{condition="false"} == 1  # Pod not ready
-      for: 10m  # Persist for 10 mins
-      labels:
-        severity: warning  # Warning
+        - alert: PodNotReady
+          expr: kube_pod_status_ready{condition="false"} == 1
+          for: 10m
+          labels:
+            severity: warning
 
-  # ---------------------------
-  # 🔹 6. DATABASE HEALTH
-  # ---------------------------
-  - name: database  # Database monitoring group
-    rules:
-    - alert: DBConnectionPoolHigh  # DB connection saturation
-      expr: |
-        HikariCP_connections_active / HikariCP_connections_max > 0.9
-      for: 2m  # Persist for 2 mins
-      labels:
-        severity: warning  # Warning
+    - name: database
+      rules:
+        - alert: DBConnectionPoolHigh
+          expr: |
+            HikariCP_connections_active
+            /
+            HikariCP_connections_max > 0.9
+          for: 2m
+          labels:
+            severity: warning
 
-    - alert: DatabaseHighLatency  # Slow DB queries
-      expr: rate(mysql_global_status_slow_queries{namespace="banking-prod"}[5m]) > 5  # More than 5 slow queries/sec
-      for: 2m  # Persist
-      labels:
-        severity: warning  # Warning
+        - alert: DatabaseHighLatency
+          expr: rate(mysql_global_status_slow_queries{namespace="banking-prod"}[5m]) > 5
+          for: 2m
+          labels:
+            severity: warning
 
-  # ---------------------------
-  # 🔹 7. DISK & INFRA
-  # ---------------------------
-  - name: infrastructure  # Infra-level monitoring
-    rules:
-    - alert: LowDiskSpace  # Disk space alert
-      expr: |
-        node_filesystem_avail_bytes  # Available disk
-        / node_filesystem_size_bytes < 0.1  # Less than 10% free
-      for: 5m  # Persist
-      labels:
-        severity: critical  # Critical alert
+    - name: infrastructure
+      rules:
+        - alert: LowDiskSpace
+          expr: |
+            node_filesystem_avail_bytes
+            /
+            node_filesystem_size_bytes < 0.1
+          for: 5m
+          labels:
+            severity: critical
 
-    - alert: OOMKilled  # Container killed due to memory
-      expr: kube_pod_container_status_terminated_reason{reason="OOMKilled"} > 0  # Detect OOM kills
-      labels:
-        severity: critical  # Critical
+        - alert: OOMKilled
+          expr: kube_pod_container_status_terminated_reason{reason="OOMKilled"} > 0
+          labels:
+            severity: critical
 
-  # ---------------------------
-  # 🔹 8. TRAFFIC / BUSINESS
-  # ---------------------------
-  - name: traffic  # Business traffic monitoring
-    rules:
-    - alert: TrafficDrop  # Traffic drop alert
-      expr: |
-        rate(http_server_requests_seconds_count[5m])  # Current traffic
-        <
-        (rate(http_server_requests_seconds_count[5m] offset 1h) * 0.5)  # Less than 50% of last hour
-      for: 5m  # Persist
-      labels:
-        severity: critical  # Critical
+    - name: traffic
+      rules:
+        - alert: TrafficDrop
+          expr: |
+            rate(http_server_requests_seconds_count[5m])
+            <
+            (rate(http_server_requests_seconds_count[5m] offset 1h) * 0.5)
+          for: 5m
+          labels:
+            severity: critical
 
-    - alert: TrafficSpike  # Traffic surge alert
-      expr: |
-        rate(http_server_requests_seconds_count[5m])  # Current traffic
-        >
-        (rate(http_server_requests_seconds_count[5m] offset 1h) * 2)  # More than 2x last hour
-      for: 5m  # Persist
-      labels:
-        severity: warning  # Warning
+        - alert: TrafficSpike
+          expr: |
+            rate(http_server_requests_seconds_count[5m])
+            >
+            (rate(http_server_requests_seconds_count[5m] offset 1h) * 2)
+          for: 5m
+          labels:
+            severity: warning
 
-  # ---------------------------
-  # 🔹 9. SECURITY
-  # ---------------------------
-  - name: security  # Security monitoring
-    rules:
-    - alert: AuthFailures  # Authentication failures alert
-      expr: rate(spring_security_auth_failures_total[5m]) > 20  # >20 failed logins
-      for: 2m  # Persist
-      labels:
-        severity: critical  # Critical alert
+    - name: security
+      rules:
+        - alert: AuthFailures
+          expr: rate(spring_security_auth_failures_total[5m]) > 20
+          for: 2m
+          labels:
+            severity: critical
 
-  # ---------------------------
-  # 🔹 10. QUEUE SYSTEM
-  # ---------------------------
-  - name: queues  # Queue monitoring
-    rules:
-    - alert: QueueBacklog  # Kafka lag alert
-      expr: kafka_consumer_lag > 1000  # Consumer lag >1000 messages
-      for: 5m  # Persist
-      labels:
-        severity: warning  # Warning
+    - name: queues
+      rules:
+        - alert: QueueBacklog
+          expr: kafka_consumer_lag > 1000
+          for: 5m
+          labels:
+            severity: warning
 
-  # ---------------------------
-  # 🔹 11. TLS / SSL
-  # ---------------------------
-  - name: tls  # SSL monitoring
-    rules:
-    - alert: SSLCertExpiringSoon  # SSL expiry alert
-      expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 15  # Less than 15 days left
-      for: 1h  # Persist for 1 hour
-      labels:
-        severity: warning  # Warning
+    - name: tls
+      rules:
+        - alert: SSLCertExpiringSoon
+          expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 15
+          for: 1h
+          labels:
+            severity: warning
 
-  # ---------------------------
-  # 🔹 12. BACKUP
-  # ---------------------------
-  - name: backup  # Backup monitoring
-    rules:
-    - alert: BackupFailed  # Backup failure alert
-      expr: velero_backup_failure_total > 0  # Any backup failure detected
-      labels:
-        severity: critical  # Critical alert
+    - name: backup
+      rules:
+        - alert: BackupFailed
+          expr: velero_backup_failure_total > 0
+          labels:
+            severity: critical

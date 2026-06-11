@@ -1,4 +1,3 @@
-# prod/main.tf
 
 # 1. Networking Layer
 module "vpc" {
@@ -36,7 +35,6 @@ module "eks" {
   project_name           = var.project_name
   kubernetes_version     = "1.31"
   private_app_subnet_ids = module.vpc.private_app_subnet_ids
-  # oidc_provider_arn     = module.security.oidc_provider_arn
 }
 
 # 5. IAM (depends on EKS + S3)
@@ -45,7 +43,7 @@ module "iam" {
   project_name      = var.project_name
   oidc_provider_arn = module.eks.oidc_provider_arn
   oidc_provider_url = module.eks.cluster_oidc_issuer_url
-  s3_bucket_arn     = module.s3_app.bucket_arn   # ✅ FIXED NAME
+  s3_bucket_arn     = module.s3_app.bucket_arn  
   common_tags       = var.common_tags
   depends_on = [module.eks, module.s3_app]
   namespace            = var.namespace
@@ -91,26 +89,22 @@ module "route53" {
   source = "../modules/route53"
 
   domain_name = var.domain_name
-
-  # certificate_arn = module.acm.certificate_arn
-  # acm_domain_validation_options = module.acm.domain_validation_options
-
   alb_dns_name = module.alb.alb_dns_name
   alb_zone_id  = module.alb.alb_zone_id
 }
 
 
-# 1. Create the Bucket
+# 10. Create the Bucket
 module "loki_s3_bucket" {
   source         = "../modules/s3"
   project_name   = "${var.project_name}-loki-logs-prod" 
-  bucket_purpose = "loki-logs"   # Be specific
+  bucket_purpose = "loki-logs"   
   environment    = "prod"
   common_tags    = var.common_tags
   kms_key_arn = module.security.kms_key_arn
 }
 
-# 2. IAM Policy for Loki (Least Privilege)
+# 11. IAM Policy for Loki (Least Privilege)
 resource "aws_iam_policy" "loki_s3" {
   name        = "prod-loki-s3-access"
   description = "Allows Loki to read/write/delete logs in its own S3 bucket"
@@ -132,7 +126,7 @@ resource "aws_iam_policy" "loki_s3" {
   })
 }
 
-# 3. The IRSA Role (OIDC Link)
+# 12. The IRSA Role (OIDC Link)
 module "loki_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version = "~> 5.0"
@@ -151,7 +145,7 @@ module "loki_irsa" {
   }
 }
 
-# 1. Create the Tempo S3 Bucket
+# 13. Create the Tempo S3 Bucket
 module "tempo_s3_bucket" {
   source         = "../modules/s3"
   project_name   = "${var.project_name}-loki-logs-prod"
@@ -161,7 +155,7 @@ module "tempo_s3_bucket" {
   kms_key_arn = module.security.kms_key_arn
 }
 
-# 2. IAM Policy for Tempo
+# 14. IAM Policy for Tempo
 resource "aws_iam_policy" "tempo_s3" {
   name        = "prod-tempo-s3-access"
   policy = jsonencode({
@@ -176,7 +170,7 @@ resource "aws_iam_policy" "tempo_s3" {
   })
 }
 
-# 3. IRSA Role for Tempo
+# 15. IRSA Role for Tempo
 module "tempo_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version = "~> 5.60.0"

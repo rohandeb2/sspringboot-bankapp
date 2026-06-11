@@ -8,12 +8,6 @@ variable "kubernetes_version" {
   type        = string
 }
 
-
-# variable "oidc_provider_arn" {
-#   description = "OIDC provider ARN for IRSA (used by Karpenter)"
-#   type        = string
-# }
-
 variable "private_app_subnet_ids" {
   description = "List of private app subnet IDs for EKS"
   type        = list(string)

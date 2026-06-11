@@ -1,8 +1,10 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
+
 metadata:
   name: {{ include "banking.fullname" . }}-default-deny
   namespace: {{ .Values.namespace }}
+
   labels:
     {{- include "banking.labels" . | nindent 4 }}
 
@@ -17,17 +19,14 @@ spec:
 
   ingress:
     - from:
-        # ✅ Same namespace (service-to-service)
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Values.namespace }}
 
-        # ✅ Istio Ingress Gateway (entry point traffic)
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: istio-system
 
-        # ✅ Monitoring stack (Prometheus scraping)
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: monitoring
@@ -37,50 +36,48 @@ spec:
           port: {{ .Values.service.targetPort | default 8080 }}
 
   egress:
+    # DNS
     - to:
-        # ✅ DNS (VERY IMPORTANT or everything breaks)
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: kube-system
+
       ports:
         - protocol: UDP
           port: 53
         - protocol: TCP
           port: 53
 
+    # Database
     - to:
-        # ✅ Database access
         - ipBlock:
             cidr: {{ .Values.network.databaseCidr | default "10.0.0.0/16" }}
+
       ports:
         - protocol: TCP
           port: 3306
 
+    # Observability stack
     - to:
-        # ✅ Allow sending telemetry to observability stack
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: monitoring
 
       ports:
-        # Prometheus Push / Metrics (if any)
         - protocol: TCP
           port: 9090
 
-        # Grafana (optional, if app talks to it)
         - protocol: TCP
           port: 3000
 
-        # Loki (logs)
         - protocol: TCP
           port: 3100
 
-        # Tempo / OTEL collector (VERY IMPORTANT)
         - protocol: TCP
-          port: 4317   # gRPC
-        - protocol: TCP
-          port: 4318   # HTTP
+          port: 4317
 
-        # Elasticsearch (if used in ELK)
+        - protocol: TCP
+          port: 4318
+
         - protocol: TCP
           port: 9200

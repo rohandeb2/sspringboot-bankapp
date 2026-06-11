@@ -1,0 +1,8 @@
+apiVersion: v2
+name: banking-platform
+description: Helm chart for banking microservices
+
+type: application
+
+version: 1.0.0
+appVersion: "1.0.1"

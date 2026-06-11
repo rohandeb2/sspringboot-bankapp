@@ -1,38 +1,7 @@
 #!/bin/sh
-# ----------------------------------------------------------------------------
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#    https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-# ----------------------------------------------------------------------------
-
-# ----------------------------------------------------------------------------
-# Apache Maven Wrapper startup batch script, version 3.3.2
-#
-# Optional ENV vars
-# -----------------
-#   JAVA_HOME - location of a JDK home dir, required when download maven via java source
-#   MVNW_REPOURL - repo url base for downloading maven distribution
-#   MVNW_USERNAME/MVNW_PASSWORD - user and password for downloading maven
-#   MVNW_VERBOSE - true: enable verbose log; debug: trace the mvnw script; others: silence the output
-# ----------------------------------------------------------------------------
-
 set -euf
 [ "${MVNW_VERBOSE-}" != debug ] || set -x
 
-# OS specific support.
 native_path() { printf %s\\n "$1"; }
 case "$(uname)" in
 CYGWIN* | MINGW*)
@@ -41,12 +10,9 @@ CYGWIN* | MINGW*)
   ;;
 esac
 
-# set JAVACMD and JAVACCMD
 set_java_home() {
-  # For Cygwin and MinGW, ensure paths are in Unix format before anything is touched
   if [ -n "${JAVA_HOME-}" ]; then
     if [ -x "$JAVA_HOME/jre/sh/java" ]; then
-      # IBM's JDK on AIX uses strange locations for the executables
       JAVACMD="$JAVA_HOME/jre/sh/java"
       JAVACCMD="$JAVA_HOME/jre/sh/javac"
     else
@@ -77,8 +43,6 @@ set_java_home() {
     fi
   fi
 }
-
-# hash string like Java String::hashCode
 hash_string() {
   str="${1:-}" h=0
   while [ -n "$str" ]; do
@@ -98,14 +62,9 @@ die() {
 }
 
 trim() {
-  # MWRAPPER-139:
-  #   Trims trailing and leading whitespace, carriage returns, tabs, and linefeeds.
-  #   Needed for removing poorly interpreted newline sequences when running in more
-  #   exotic environments such as mingw bash on Windows.
   printf "%s" "${1}" | tr -d '[:space:]'
 }
 
-# parse distributionUrl and optional distributionSha256Sum, requires .mvn/wrapper/maven-wrapper.properties
 while IFS="=" read -r key value; do
   case "${key-}" in
   distributionUrl) distributionUrl=$(trim "${value-}") ;;
@@ -133,8 +92,6 @@ maven-mvnd-*) MVN_CMD=mvnd.sh _MVNW_REPO_PATTERN=/maven/mvnd/ ;;
 *) MVN_CMD="mvn${0##*/mvnw}" _MVNW_REPO_PATTERN=/org/apache/maven/ ;;
 esac
 
-# apply MVNW_REPOURL and calculate MAVEN_HOME
-# maven home pattern: ~/.m2/wrapper/dists/{apache-maven-<version>,maven-mvnd-<version>-<platform>}/<hash>
 [ -z "${MVNW_REPOURL-}" ] || distributionUrl="$MVNW_REPOURL$_MVNW_REPO_PATTERN${distributionUrl#*"$_MVNW_REPO_PATTERN"}"
 distributionUrlName="${distributionUrl##*/}"
 distributionUrlNameMain="${distributionUrlName%.*}"
@@ -167,22 +124,18 @@ fi
 
 mkdir -p -- "${MAVEN_HOME%/*}"
 
-# Download and Install Apache Maven
 verbose "Couldn't find MAVEN_HOME, downloading and installing it ..."
 verbose "Downloading from: $distributionUrl"
 verbose "Downloading to: $TMP_DOWNLOAD_DIR/$distributionUrlName"
 
-# select .zip or .tar.gz
 if ! command -v unzip >/dev/null; then
   distributionUrl="${distributionUrl%.zip}.tar.gz"
   distributionUrlName="${distributionUrl##*/}"
 fi
 
-# verbose opt
 __MVNW_QUIET_WGET=--quiet __MVNW_QUIET_CURL=--silent __MVNW_QUIET_UNZIP=-q __MVNW_QUIET_TAR=''
 [ "${MVNW_VERBOSE-}" != true ] || __MVNW_QUIET_WGET='' __MVNW_QUIET_CURL='' __MVNW_QUIET_UNZIP='' __MVNW_QUIET_TAR=v
 
-# normalize http auth
 case "${MVNW_PASSWORD:+has-password}" in
 '') MVNW_USERNAME='' MVNW_PASSWORD='' ;;
 has-password) [ -n "${MVNW_USERNAME-}" ] || MVNW_USERNAME='' MVNW_PASSWORD='' ;;
@@ -212,14 +165,12 @@ elif set_java_home; then
 	  }
 	}
 	END
-  # For Cygwin/MinGW, switch paths to Windows format before running javac and java
   verbose " - Compiling Downloader.java ..."
   "$(native_path "$JAVACCMD")" "$(native_path "$javaSource")" || die "Failed to compile Downloader.java"
   verbose " - Running Downloader.java ..."
   "$(native_path "$JAVACMD")" -cp "$(native_path "$TMP_DOWNLOAD_DIR")" Downloader "$distributionUrl" "$(native_path "$targetZip")"
 fi
 
-# If specified, validate the SHA-256 sum of the Maven distribution zip file
 if [ -n "${distributionSha256Sum-}" ]; then
   distributionSha256Result=false
   if [ "$MVN_CMD" = mvnd.sh ]; then
@@ -246,7 +197,6 @@ if [ -n "${distributionSha256Sum-}" ]; then
   fi
 fi
 
-# unzip and move
 if command -v unzip >/dev/null; then
   unzip ${__MVNW_QUIET_UNZIP:+"$__MVNW_QUIET_UNZIP"} "$TMP_DOWNLOAD_DIR/$distributionUrlName" -d "$TMP_DOWNLOAD_DIR" || die "failed to unzip"
 else

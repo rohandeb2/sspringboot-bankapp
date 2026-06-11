@@ -1,12 +1,16 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Rollout
+
 metadata:
   name: {{ include "banking.fullname" . }}
   namespace: {{ .Values.namespace }}
+
   labels:
     {{- include "banking.labels" . | nindent 4 }}
+
 spec:
   replicas: {{ .Values.replicaCount | default 1 }}
+
   selector:
     matchLabels:
       app: {{ include "banking.fullname" . }}
@@ -22,73 +26,98 @@ spec:
     metadata:
       labels:
         app: {{ include "banking.fullname" . }}
+
     spec:
       serviceAccountName: {{ include "banking.fullname" . }}
+
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
         fsGroup: 2000
         seccompProfile:
           type: RuntimeDefault
+
       containers:
         - name: banking-api
+
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
             runAsUser: 1000
             capabilities:
-              drop: ["ALL"]
+              drop:
+                - ALL
             seccompProfile:
               type: RuntimeDefault
+
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+
           ports:
             - name: http
               containerPort: {{ .Values.service.targetPort | default 8080 }}
               protocol: TCP
+
           env:
             - name: OTEL_SERVICE_NAME
-              value: "banking-core-service"
+              value: banking-core-service
+
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://otel-collector.monitoring.svc.cluster.local:4317"
+              value: http://otel-collector.monitoring.svc.cluster.local:4317
+
             - name: OTEL_RESOURCE_ATTRIBUTES
-              value: "service.namespace=banking,env=prod,pod.name=$(K8S_POD_NAME)"
+              value: service.namespace=banking,env=prod,pod.name=$(K8S_POD_NAME)
+
             - name: OTEL_METRICS_EXPORTER
-              value: "none"
+              value: none
+
             - name: OTEL_TRACES_EXPORTER
-              value: "otlp"
+              value: otlp
+
             - name: OTEL_LOGS_EXPORTER
-              value: "otlp"
+              value: otlp
+
             - name: K8S_POD_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+
             - name: JAVA_TOOL_OPTIONS
               value: "-javaagent:/app/opentelemetry-javaagent.jar"
+
           envFrom:
             - configMapRef:
                 name: {{ include "banking.fullname" . }}-config
+
             - secretRef:
                 name: {{ include "banking.fullname" . }}-db-secrets
+
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+
           startupProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             failureThreshold: 30
             periodSeconds: 10
+
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: http
             periodSeconds: 20
+
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: http
             periodSeconds: 10
+
           lifecycle:
             preStop:
               exec:
-                command: ["/bin/sh", "-c", "sleep 20"]
+                command:
+                  - /bin/sh
+                  - -c
+                  - sleep 20

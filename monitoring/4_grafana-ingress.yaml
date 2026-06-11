@@ -1,31 +1,34 @@
-# “Create an Application Load Balancer and route traffic from grafana.rohandevops.co.in to Grafana service”
+apiVersion: networking.k8s.io/v1
+kind: Ingress
 
-apiVersion: networking.k8s.io/v1  # Kubernetes Ingress API version
-kind: Ingress  # Defines external access to services inside cluster
 metadata:
-  name: grafana-ingress  # Name of this ingress resource
-  namespace: monitoring  # Same namespace where Grafana service exists
+  name: grafana-ingress
+  namespace: monitoring
+
   annotations:
-    kubernetes.io/ingress.class: alb  # Tells AWS Load Balancer Controller to handle this ingress (creates ALB)
-    alb.ingress.kubernetes.io/scheme: internet-facing  # Makes ALB public (accessible from internet)
-    alb.ingress.kubernetes.io/target-type: ip  # Routes traffic directly to pod IPs instead of nodes
-    
-    alb.ingress.kubernetes.io/ssl-redirect: '443'  # Redirect all HTTP traffic to HTTPS
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'  # ALB listens on both HTTP and HTTPS
-    
-    alb.ingress.kubernetes.io/healthcheck-path: /login  # ALB checks Grafana health using /login endpoint
-    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '15'  # Health check every 15 seconds
-    
-    alb.ingress.kubernetes.io/target-group-attributes: stickiness.enabled=true,stickiness.lb_cookie.duration_seconds=3600  # Keeps user session on same pod (important for Grafana UI)
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+
+    alb.ingress.kubernetes.io/healthcheck-path: /login
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+
+    alb.ingress.kubernetes.io/target-group-attributes: >
+      stickiness.enabled=true,
+      stickiness.lb_cookie.duration_seconds=3600
+
 spec:
   rules:
-    - host: grafana.rohandevops.co.in  # Domain name used to access Grafana
+    - host: grafana.rohandevops.co.in
       http:
         paths:
-          - path: /  # Match all paths
-            pathType: Prefix  # Prefix matching (everything under /)
+          - path: /
+            pathType: Prefix
             backend:
               service:
-                name: kube-prometheus-stack-grafana  # Grafana service created by Helm chart
+                name: kube-prometheus-stack-grafana
                 port:
-                  number: 80  # Service port
+                  number: 80

@@ -30,7 +30,6 @@ spec:
       name: vpa-webhook-config
       jsonPointers:
         - /webhooks/0/clientConfig/caBundle
-    # ADD THIS BLOCK - ignores the self-reference drift
     - group: argoproj.io
       kind: Application
       name: vpa-stack

@@ -1,26 +1,21 @@
-# modules/s3/main.tf
-
-# S3 bucket for storing application data, logs, or backups
 resource "aws_s3_bucket" "main" {
-  bucket        = "${var.project_name}-${var.bucket_purpose}-${var.environment}" # unique bucket name
-  force_destroy = var.environment == "prod" ? false : true # prevent accidental deletion in prod
+  bucket        = "${var.project_name}-${var.bucket_purpose}-${var.environment}" 
+  force_destroy = var.environment == "prod" ? false : true 
 
   tags = merge(var.common_tags, { 
-    Name    = "${var.project_name}-${var.bucket_purpose}" # bucket name tag
-    Purpose = var.bucket_purpose                         # logical purpose of bucket
+    Name    = "${var.project_name}-${var.bucket_purpose}" 
+    Purpose = var.bucket_purpose                        
   })
 }
 
-# Enable versioning to keep multiple versions of objects (useful for backups and recovery)
 resource "aws_s3_bucket_versioning" "main" {
   bucket = aws_s3_bucket.main.id
 
   versioning_configuration {
-    status = "Enabled" # turns on object versioning
+    status = "Enabled" 
   }
 }
 
-# Enable server-side encryption using AES256 for data protection at rest
 resource "aws_s3_bucket_server_side_encryption_configuration" "main" {
   bucket = aws_s3_bucket.main.id
 
@@ -32,21 +27,18 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "main" {
   }
 }
 
-# Block all public access to enforce security (critical for banking/production workloads)
 resource "aws_s3_bucket_public_access_block" "main" {
   bucket = aws_s3_bucket.main.id
 
-  block_public_acls       = true # prevents public ACLs
-  block_public_policy     = true # prevents public bucket policies
-  ignore_public_acls      = true # ignores existing public ACLs
-  restrict_public_buckets = true # restricts public bucket access
+  block_public_acls       = true 
+  block_public_policy     = true 
+  ignore_public_acls      = true 
+  restrict_public_buckets = true 
 }
 
-# Lifecycle rules to optimize storage cost and manage log/data retention
 resource "aws_s3_bucket_lifecycle_configuration" "main" {
   bucket = aws_s3_bucket.main.id
 
-  # Existing rule for archiving older versions (implementation not shown)
   rule {
     id     = "archive-old-versions"
     status = "Enabled"
@@ -61,18 +53,17 @@ resource "aws_s3_bucket_lifecycle_configuration" "main" {
     }
   }
 
-  # Log retention rule for Loki logs (cost + compliance management)
   rule {
-    id     = "loki-log-retention" # lifecycle rule for logs
-    status = "Enabled"            # activates the rule
+    id     = "loki-log-retention" 
+    status = "Enabled"            
     filter {}
     transition {
-      days          = 30         # move logs after 30 days
-      storage_class = "GLACIER"  # cheaper cold storage
+      days          = 30         
+      storage_class = "GLACIER"  
     }
 
     expiration {
-      days = 90 # delete logs permanently after 90 days
+      days = 90 
     }
   }
 }

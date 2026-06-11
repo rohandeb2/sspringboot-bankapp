@@ -1,45 +1,49 @@
-# This file is created to automatically add a Grafana dashboard into your cluster without manual work
+apiVersion: v1
+kind: ConfigMap
 
-apiVersion: v1  # Core Kubernetes API version for basic resources
-kind: ConfigMap  # ConfigMap is used to store non-confidential data in key-value pairs, ideal for Grafana dashboards
 metadata:
   name: springboot-banking-dashboard
   namespace: monitoring
+
   labels:
-    grafana_dashboard: "1" #This confimap contains a Grafana dashboard (label used by Grafana Operator to auto-import)
+    grafana_dashboard: "1"
+
   annotations:
-    grafana_folder: "Banking Operations"  # Optional: Specify a folder in Grafana to organize dashboards (requires Grafana Operator support)
-data: 
-  springboot-micrometer.json: |-     # This is a Grafana dashboard JSON definition that visualizes key metrics from your Spring Boot application using Micrometer.
+    grafana_folder: "Banking Operations"
+
+data:
+  springboot-micrometer.json: |-
     {
-      "annotations": { "list": [] },   # No annotations defined for this dashboard
-      "editable": true,                # Allows users to edit the dashboard in Grafana UI
-      "gnetId": 4701,                  # Grafana.com dashboard ID it will download and use as a template (optional, can be removed if you want to use the JSON as-is)
-      "graphTooltip": 0,               # Tooltip behavior for graphs
-      "links": [],                     # No external links defined for this dashboard
-      "panels": [                      # Panels define the individual visualizations on the dashboard
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "gnetId": 4701,
+      "graphTooltip": 0,
+      "links": [],
+      "panels": [
         {
-          "title": "JVM Memory Usage",   # Title of the panel
-          "type": "graph",                # Type of visualization (graph, gauge, table, etc.)
+          "title": "JVM Memory Usage",
+          "type": "graph",
           "targets": [
             {
-              "expr": "sum(jvm_memory_used_bytes{app=~\".*banking-platform\"})",       #this sum the jvm memory used across all instances of the banking-platform application, allowing you to monitor total memory usage in Grafana.
-              "refId": "A"                 # Reference ID for this query, used for linking to legends and other features in Grafana
+              "expr": "sum(jvm_memory_used_bytes{app=~\".*banking-platform\"})",
+              "refId": "A"
             }
           ]
         },
         {
-          "title": "HTTP Request Rate",               # Title of the second panel
-          "type": "graph",                            # Type of visualization
+          "title": "HTTP Request Rate",
+          "type": "graph",
           "targets": [
             {
-              "expr": "sum(rate(http_server_requests_seconds_count{app=~\".*banking-platform\"}[5m]))",       # This calculates the per-second rate of HTTP requests to your banking-platform application over the last 5 minutes, giving you insight into traffic patterns and load in Grafana.
-              "refId": "A"           # Reference ID for this query
+              "expr": "sum(rate(http_server_requests_seconds_count{app=~\".*banking-platform\"}[5m]))",
+              "refId": "A"
             }
           ]
         }
       ],
-      "schemaVersion": 26,                        # Grafana dashboard schema version, used for compatibility
-      "title": "Banking Core - Performance",      # Overall title of the dashboard
-      "uid": "banking-performance-01"             # Unique identifier for the dashboard, can be used for direct access in Grafana
+      "schemaVersion": 26,
+      "title": "Banking Core - Performance",
+      "uid": "banking-performance-01"
     }

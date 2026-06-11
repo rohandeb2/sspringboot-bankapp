@@ -1,4 +1,3 @@
-# --- Project Metadata ---
 variable "project_name" {
   description = "Name of the project"
   type        = string
@@ -20,13 +19,11 @@ variable "kms_key_arn" {
   type        = string
 }
 
-# --- Standard Tagging Policy ---
 variable "common_tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)
 }
 
-# --- Network & Kubernetes ---
 variable "kubernetes_version" {
   description = "Version of EKS to deploy"
   type        = string
@@ -52,7 +49,6 @@ variable "private_data_subnets" {
   type        = list(string)
 }
 
-# --- Database (RDS) ---
 variable "db_instance_class" {
   description = "The instance type of the RDS database"
   type        = string
@@ -63,19 +59,16 @@ variable "db_name" {
   type        = string
 }
 
-# --- Logging & Monitoring ---
 variable "log_retention_days" {
   description = "Number of days to retain CloudWatch logs"
   type        = number
 }
 
-# --- Domain & SSL ---
 variable "domain_name" {
   description = "The primary domain name for the application"
   type        = string
 }
 
-# --- K8s Namespacing & IAM ---
 variable "namespace" {
   description = "The Kubernetes namespace for the app"
   type        = string

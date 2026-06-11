@@ -1,5 +1,6 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
+
 metadata:
   name: otel-collector
   namespace: argocd
@@ -18,16 +19,14 @@ spec:
 
         image:
           repository: otel/opentelemetry-collector-contrib
-          tag: "0.110.0"   # ✅ aligned with chart version
+          tag: "0.110.0"
 
         useGOMEMLIMIT: false
 
-        # ✅ Container-level security (NO fsGroup here)
         securityContext:
           runAsNonRoot: true
           runAsUser: 1000
 
-        # ✅ Pod-level security (fsGroup goes HERE)
         podSecurityContext:
           runAsNonRoot: true
           runAsUser: 1000
@@ -59,12 +58,16 @@ spec:
 
             pipelines:
               traces:
-                receivers: [otlp]
-                exporters: [otlp/tempo]
+                receivers:
+                  - otlp
+                exporters:
+                  - otlp/tempo
 
               logs:
-                receivers: [otlp]
-                exporters: [loki]
+                receivers:
+                  - otlp
+                exporters:
+                  - loki
 
   destination:
     server: https://kubernetes.default.svc
@@ -77,4 +80,4 @@ spec:
 
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true  
+      - ServerSideApply=true

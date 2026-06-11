@@ -1,24 +1,17 @@
-# bootstrap/dynamodb-lock/main.tf
 provider "aws" {
   region = "${var.region}"
 }
 
 resource "aws_dynamodb_table" "terraform_locks" {
-  name         = "bankapp-terraform-locks-8446176321459" # Must match the output used in prod/backend.tf
-  billing_mode = "PAY_PER_REQUEST" # Cost-optimized for infrequent hits
-  hash_key     = "LockID"         # Mandatory name for Terraform state locking
-
-  # The attribute must be named exactly "LockID" and be a String (S)
+  name         = "bankapp-terraform-locks-8446176321459" 
+  billing_mode = "PAY_PER_REQUEST" 
+  hash_key     = "LockID"         
   attribute {
     name = "LockID"
     type = "S"
   }
+  deletion_protection_enabled = var.environment == "prod" ? true : false
 
-  # Prevent accidental deletion of the lock table
-  # deletion_protection_enabled = var.environment == "prod" ? true : false
-
-  # TTL (Time to Live) is not needed for state locks, 
-  # but point-in-time recovery is a "Senior" safety move.
   point_in_time_recovery {
     enabled = true
   }

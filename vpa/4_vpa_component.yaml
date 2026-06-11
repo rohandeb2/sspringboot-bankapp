@@ -1,80 +1,8 @@
-# 🔹 1. Creates VPA CRDs (Custom Resources)
-
-# It defines Kubernetes APIs for VPA:
-
-# ✔ VerticalPodAutoscaler
-# Enables Kubernetes to automatically adjust CPU/memory requests
-# Based on real usage patterns (not manual tuning)
-# ✔ VerticalPodAutoscalerCheckpoint
-# Stores historical recommendation checkpoints
-# Helps VPA learn usage trends over time
-
-# 👉 Without these CRDs → VPA cannot exist in the cluster.
-
-# 🔹 2. Sets up Secure TLS for VPA Webhook
-
-# It uses cert-manager to generate and manage certificates:
-
-# Flow:
-# Self-signed issuer creates a root CA
-# CA certificate (vpa-ca)
-# CA issuer signs webhook certificate (vpa-webhook-tls)
-
-# 👉 Purpose:
-
-# Secure communication between Kubernetes API server ↔ VPA webhook
-# Prevents MITM attacks
-# 🔹 3. Configures Admission Webhook (Core Logic)
-
-# This is the most important part:
-
-# ✔ MutatingWebhookConfiguration
-
-# It intercepts Kubernetes requests:
-
-# What it watches:
-# Pod CREATE / UPDATE
-# VPA resources CREATE / UPDATE
-# What it does:
-# Sends request to vpa-webhook service
-# Injects or adjusts resource recommendations
-# Applies vertical scaling suggestions
-# 🔹 4. Cert-manager auto-injection
-
-# This line is key:
-
-# cert-manager.io/inject-ca-from: kube-system/vpa-webhook-tls
-
-# 👉 It automatically:
-
-# Injects CA bundle into webhook
-# Keeps TLS certs updated
-# Removes manual certificate management
-# 🔹 5. Why failurePolicy: Ignore matters
-
-# If webhook fails:
-
-# Kubernetes will still allow pod creation
-# Prevents cluster outage due to VPA failure
-# 🚀 FINAL SUMMARY
-
-# This file enables:
-
-# ✔ VPA CRDs (core autoscaling engine)
-# ✔ TLS-secured webhook communication
-# ✔ Admission controller for pod resource mutation
-# ✔ cert-manager automation for certificates
-# ✔ Safe fallback behavior if webhook fails
-
-
-# VPA CRDs
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: verticalpodautoscalers.autoscaling.k8s.io
   annotations:
-    # cert-manager injects the correct caBundle automatically
-    cert-manager.io/inject-ca-from: kube-system/vpa-webhook-tls
     api-approved.kubernetes.io: "https://github.com/kubernetes/enhancements/pull/1111"
 spec:
   group: autoscaling.k8s.io
@@ -95,6 +23,7 @@ spec:
           x-kubernetes-preserve-unknown-fields: true
       subresources:
         status: {}
+
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -121,39 +50,54 @@ spec:
           x-kubernetes-preserve-unknown-fields: true
       subresources:
         status: {}
+
 ---
-# MutatingWebhookConfiguration — cert-manager auto-injects caBundle via annotation
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: vpa-webhook-config
   annotations:
     cert-manager.io/inject-ca-from: kube-system/vpa-webhook-tls
-webhooks:
-  - name: vpa.k8s.io
-    admissionReviewVersions: ["v1"]
-    clientConfig:
-      service:
-        name: vpa-webhook
-        namespace: kube-system
-        port: 8000
-      # caBundle is intentionally empty — cert-manager fills this automatically
-      caBundle: ""
-    rules:
-      - apiGroups: [""]
-        apiVersions: ["v1"]
-        operations: ["CREATE", "UPDATE"]
-        resources: ["pods"]
-      - apiGroups: ["autoscaling.k8s.io"]
-        apiVersions: ["*"]
-        operations: ["CREATE", "UPDATE"]
-        resources: ["verticalpodautoscalers"]
-    failurePolicy: Ignore
-    sideEffects: None
-    namespaceSelector:
-      matchExpressions:
-        - key: kubernetes.io/metadata.name
-          operator: NotIn
-          values:
-            - kube-system
-            - cert-manager
+spec:
+  webhooks:
+    - name: vpa.k8s.io
+      admissionReviewVersions:
+        - v1
+
+      clientConfig:
+        service:
+          name: vpa-webhook
+          namespace: kube-system
+          port: 8000
+
+      rules:
+        - apiGroups:
+            - ""
+          apiVersions:
+            - v1
+          operations:
+            - CREATE
+            - UPDATE
+          resources:
+            - pods
+
+        - apiGroups:
+            - autoscaling.k8s.io
+          apiVersions:
+            - "*"
+          operations:
+            - CREATE
+            - UPDATE
+          resources:
+            - verticalpodautoscalers
+
+      failurePolicy: Ignore
+      sideEffects: None
+
+      namespaceSelector:
+        matchExpressions:
+          - key: kubernetes.io/metadata.name
+            operator: NotIn
+            values:
+              - kube-system
+              - cert-manager

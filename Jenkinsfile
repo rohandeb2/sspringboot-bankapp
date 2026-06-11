@@ -12,19 +12,11 @@ pipeline {
         SONAR_URL                   = "http://localhost:9000"
         SONAR_PROJECT_KEY           = "springboot-bankapp"
     }
-
-    // ─────────────────────────────────────────
-    // AUTO TRIGGER — on every GitHub push
-    // ─────────────────────────────────────────
     triggers {
         githubPush()
     }
 
     stages {
-
-        // ─────────────────────────────────────────
-        // STAGE 0 — Pull all secrets from AWS
-        // ─────────────────────────────────────────
         stage('Configure AWS + Pull Secrets') {
             steps {
                 script {
@@ -56,10 +48,6 @@ pipeline {
                 }
             }
         }
-
-        // ─────────────────────────────────────────
-        // STAGE 1 — Build
-        // ─────────────────────────────────────────
         stage('Build & Package') {
             steps {
                 sh """
@@ -69,27 +57,6 @@ pipeline {
                 """
             }
         }
-        stage('2. SonarQube Analysis') {
-            steps {
-                script {
-                    echo "🚀 Starting SonarQube Analysis..."
-                    echo "🔍 Scanning project: springboot-bankapp"
-                    echo "📡 Connecting to SonarQube server..."
-                    echo "📦 Uploading analysis report..."
-                    echo "⏳ Waiting for Quality Gate result..."
-                    echo "📊 SonarQube Quality Gate Status: OK"
-                    echo "✅ SonarQube Analysis Completed Successfully"
-                }
-            }
-        }
-        // ─────────────────────────────────────────
-        // STAGE 2 — SAST: SonarQube (disabled until pod is stable)
-        // Uncomment this entire stage once SonarQube is running:
-        //   kubectl get pods -n devsecops → sonarqube-sonarqube-0 1/1 Running
-        //   kubectl port-forward svc/sonarqube-sonarqube -n devsecops 9000:9000 &
-        //   curl http://localhost:9000/api/system/status → {"status":"UP"}
-        // ─────────────────────────────────────────
-        /*
         stage('SAST — SonarQube') {
             steps {
                 script {
@@ -136,9 +103,6 @@ pipeline {
         }
         */
 
-        // ─────────────────────────────────────────
-        // STAGE 3 — SCA: OWASP Dependency Check
-        // ─────────────────────────────────────────
         stage('SCA — OWASP Dependency Check') {
             steps {
                 sh 'mkdir -p dependency-check-report'
@@ -163,18 +127,12 @@ pipeline {
                 archiveArtifacts artifacts: 'dependency-check-report/**', allowEmptyArchive: true
             }
         }
-
-        // ─────────────────────────────────────────
-        // STAGE 4 — Docker Build + Trivy Scan
-        // ─────────────────────────────────────────
         stage('Docker Build + Trivy Scan') {
             steps {
                 script {
                     def fullImage = "${ECR_URL}/${IMAGE_REPO}:${IMAGE_TAG}"
 
                     sh "docker build -t ${fullImage} ."
-
-                    // Block pipeline if CRITICAL vulnerabilities found
                     sh """
                         trivy image \
                           --exit-code 0 \
@@ -184,8 +142,6 @@ pipeline {
                           --timeout 10m \
                           ${fullImage}
                     """
-
-                    // Full report for all severities — archived for review
                     sh """
                         trivy image \
                           --exit-code 0 \
@@ -202,16 +158,10 @@ pipeline {
                 }
             }
         }
-
-        // ─────────────────────────────────────────
-        // STAGE 5 — Push to ECR + ECR Native Scan
-        // ─────────────────────────────────────────
         stage('Push to ECR') {
             steps {
                 script {
                     def fullImage = "${ECR_URL}/${IMAGE_REPO}:${IMAGE_TAG}"
-
-                    // Create ECR repo if it doesn't exist yet
                     sh """
                         aws ecr describe-repositories \
                           --repository-names ${IMAGE_REPO} \
@@ -220,27 +170,19 @@ pipeline {
                           --repository-name ${IMAGE_REPO} \
                           --region ${AWS_REGION}
                     """
-
-                    // Enable ECR native scan on push
                     sh """
                         aws ecr put-image-scanning-configuration \
                           --repository-name ${IMAGE_REPO} \
                           --image-scanning-configuration scanOnPush=true \
                           --region ${AWS_REGION}
                     """
-
-                    // Login and push
                     sh """
                         aws ecr get-login-password --region ${AWS_REGION} | \
                         docker login --username AWS --password-stdin ${ECR_URL}
                         docker push ${fullImage}
                     """
-
-                    // Wait for ECR native scan to complete
                     echo "Waiting 60s for ECR native scan..."
                     sleep(time: 60, unit: 'SECONDS')
-
-                    // Print ECR scan results (informational only)
                     sh """
                         SCAN_STATUS=\$(aws ecr describe-image-scan-findings \
                           --repository-name ${IMAGE_REPO} \
@@ -253,10 +195,6 @@ pipeline {
                 }
             }
         }
-
-        // ─────────────────────────────────────────
-        // STAGE 6 — GitOps: Update image tag
-        // ─────────────────────────────────────────
         stage('GitOps — Update Image Tag') {
             steps {
                 sh """
@@ -280,10 +218,6 @@ pipeline {
         }
 
     }
-
-    // ─────────────────────────────────────────
-    // POST — Notifications + AI RCA on failure
-    // ─────────────────────────────────────────
     post {
 
         success {

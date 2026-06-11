@@ -1,0 +1,71 @@
+namespace: banking-prod
+environment: prod
+
+team: fintech
+ownerEmail: ruhondeb28@gmail.com
+
+replicaCount: 1
+
+image:
+  repository: 959589242185.dkr.ecr.us-east-1.amazonaws.com/banking-app
+  tag: v1.0.2
+  pullPolicy: IfNotPresent
+
+service:
+  port: 80
+  targetPort: 8080
+
+config:
+  springProfile: prod
+  logLevel: DEBUG
+  dbHost: bankapp-prod-db.c2hcaeaiydw4.us-east-1.rds.amazonaws.com
+  dbPort: "3306"
+  dbName: bankappdb
+
+secrets:
+  awsSecretName: banking-prod-db-secret
+
+serviceAccount:
+  create: true
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::959589242185:role/bankapp-prod-app-irsa-role
+
+network:
+  databaseCidr: 10.0.0.0/16
+
+# Enable after metrics stack is deployed
+hpa:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPU: 70
+  targetMemory: 80
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+serviceMonitor:
+  enabled: false
+  path: /actuator/prometheus
+  interval: 15s
+
+ingress:
+  enabled: false
+  host: api.rohandevops.co.in
+  certificateArn: arn:aws:acm:us-east-1:959589242185:certificate/fd555665-ad30-46b4-88ed-de002f0a3667
+
+# Switch on when Istio is deployed
+istio:
+  enabled: false
+  host: api.rohandevops.co.in
+
+vpa:
+  enabled: false
+
+observability:
+  otelCollectorEndpoint: http://otel-collector.monitoring.svc.cluster.local:4317

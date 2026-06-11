@@ -36,35 +36,25 @@ jobs:
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  # it will fetch the role ARN from GitHub Secrets (which you set up with the OIDC trust relationship in AWS)
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }} 
           aws-region: us-east-1
 
-      # =========================================================
-      # 🔹 DEEP SECURITY SCAN (Checkov)
-      # =========================================================
       - name: Run Checkov (Recursive Scan of Prod & Modules)
         uses: bridgecrewio/checkov-action@master
         with:
-          # Scans everything under /terraform recursively
-          directory: ./terraform     # Root directory to start scanning (includes both prod and modules)
-          framework: terraform       # Specify that we are scanning Terraform code
-          quiet: true                # it will only output findings and suppress extra info to focus on security issues
-          soft_fail: true           # Fail the workflow if any issues are found (set to true to just warn without failing)
+          directory: ./terraform   
+          framework: terraform     
+          quiet: true               
+          soft_fail: true          
 
-      # =========================================================
-      # 🔹 LINTING (TFLint)
-      # =========================================================
       - name: Setup & Run TFLint
-        uses: terraform-linters/setup-tflint@v4     # Sets up TFLint in the GitHub Actions environment
+        uses: terraform-linters/setup-tflint@v4     
 
       - name: Recursive Linting
         run: |
           tflint --init
           tflint --recursive --f compact
 
-      # =========================================================
-      # 🔹 PRODUCTION DEPLOYMENT
-      # =========================================================
       - name: Terraform Init (Prod)
         working-directory: ${{ env.TF_PROD }}
         run: terraform init
@@ -75,6 +65,6 @@ jobs:
         run: terraform plan -no-color -input=false -var-file="terraform.tfvars"
 
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'  # Only apply on direct pushes to main (not on PRs)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'  
         working-directory: ${{ env.TF_PROD }}
         run: terraform apply -auto-approve -input=false -var-file="terraform.tfvars"

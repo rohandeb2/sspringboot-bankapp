@@ -1,25 +1,20 @@
-# modules/security/main.tf
-
-# KMS Key for encrypting data across AWS services (RDS, S3, EBS)
 resource "aws_kms_key" "main" {
-  description             = "KMS key for ${var.project_name} resource encryption" # key purpose
-  deletion_window_in_days = 30 # grace period before deletion
-  enable_key_rotation     = true # automatic key rotation (security best practice)
+  description = "KMS key for ${var.project_name} resource encryption" 
+  deletion_window_in_days = 30 
+  enable_key_rotation     = true 
 
-  tags = merge(var.common_tags, { Name = "${var.project_name}-kms" }) # tagging for tracking
+  tags = merge(var.common_tags, { Name = "${var.project_name}-kms" }) 
 }
 
-# Alias for easier reference of KMS key
 resource "aws_kms_alias" "main" {
-  name          = "alias/${var.project_name}-key" # friendly name for key
-  target_key_id = aws_kms_key.main.key_id         # link to actual KMS key
+  name          = "alias/${var.project_name}-key" 
+  target_key_id = aws_kms_key.main.key_id
 }
 
-# Security group for EKS worker nodes (controls outbound traffic)
 resource "aws_security_group" "eks_nodes" {
-  name        = "${var.project_name}-eks-nodes-sg" # SG name
-  description = "Security group for all nodes in the cluster" # purpose
-  vpc_id      = var.vpc_id # attach to VPC
+  name        = "${var.project_name}-eks-nodes-sg" 
+  description = "Security group for all nodes in the cluster" 
+  vpc_id      = var.vpc_id 
 
   ingress {
   from_port = 0
@@ -29,10 +24,10 @@ resource "aws_security_group" "eks_nodes" {
   description = "Allow all inbound traffic from within the security group (node-to-node communication)"
   }
   egress {
-    from_port   = 0          # allow all outbound traffic
+    from_port   = 0          
     to_port     = 0
-    protocol    = "-1"       # all protocols
-    cidr_blocks = ["0.0.0.0/0"] # open egress (default for nodes)
+    protocol    = "-1"       
+    cidr_blocks = ["0.0.0.0/0"] 
   }
 
   ingress {
@@ -45,32 +40,31 @@ resource "aws_security_group" "eks_nodes" {
 
 
   tags = merge(var.common_tags, { 
-    Name                                           = "${var.project_name}-nodes-sg" # SG name tag
-    "kubernetes.io/cluster/${var.project_name}-eks" = "owned" # EKS cluster ownership
-    "karpenter.sh/discovery"                       = var.project_name # used by Karpenter autoscaling
+    Name                                           = "${var.project_name}-nodes-sg" 
+    "kubernetes.io/cluster/${var.project_name}-eks" = "owned" 
+    "karpenter.sh/discovery"                       = var.project_name 
   })
 }
 
-# Security group for RDS (restricts access to only EKS nodes)
 resource "aws_security_group" "rds" {
-  name        = "${var.project_name}-rds-sg" # SG name
-  description = "Allow traffic from EKS nodes only" # security description
-  vpc_id      = var.vpc_id # attach to VPC
+  name        = "${var.project_name}-rds-sg" 
+  description = "Allow traffic from EKS nodes only" 
+  vpc_id      = var.vpc_id 
 
   ingress {
-    description     = "MySQL from EKS nodes" # access rule description
-    from_port       = 3306 # MySQL port
+    description     = "MySQL from EKS nodes" 
+    from_port       = 3306 
     to_port         = 3306
-    protocol        = "tcp" # TCP protocol
-    security_groups = [aws_security_group.eks_nodes.id] # allow only from EKS nodes (source-based restriction)
+    protocol        = "tcp" 
+    security_groups = [aws_security_group.eks_nodes.id] 
   }
 
   egress {
-    from_port   = 0          # allow outbound traffic
+    from_port   = 0
     to_port     = 0
-    protocol    = "-1"       # all protocols
-    cidr_blocks = ["0.0.0.0/0"] # open egress
+    protocol    = "-1"       
+    cidr_blocks = ["0.0.0.0/0"] 
   }
 
-  tags = merge(var.common_tags, { Name = "${var.project_name}-rds-sg" }) # tagging
+  tags = merge(var.common_tags, { Name = "${var.project_name}-rds-sg" }) 
 }

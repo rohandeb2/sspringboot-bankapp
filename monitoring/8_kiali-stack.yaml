@@ -1,20 +1,26 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
+
 metadata:
   name: kiali-server
-  namespace: argocd                        # was: istio-system — ArgoCD Applications always live in argocd namespace
+  namespace: argocd
+
   finalizers:
     - resources-finalizer.argocd.argoproj.io
+
 spec:
   project: default
+
   source:
     repoURL: https://kiali.github.io/helm-charts
     chart: kiali-server
     targetRevision: 1.89.0
+
     helm:
       values: |
         auth:
           strategy: anonymous
+
         deployment:
           sidecar_container_config:
             resources:
@@ -24,25 +30,32 @@ spec:
               limits:
                 cpu: 500m
                 memory: 512Mi
+
         external_services:
           prometheus:
-            url: "http://prometheus-stack-kube-prom-prometheus.monitoring.svc.cluster.local:9090"
+            url: http://prometheus-stack-kube-prom-prometheus.monitoring.svc.cluster.local:9090
+
           grafana:
             enabled: true
-            url: "http://grafana.monitoring.svc.cluster.local"
+            url: http://grafana.monitoring.svc.cluster.local
+
           tracing:
             enabled: true
-            url: "http://tempo-stack.monitoring.svc.cluster.local:3100"
+            url: http://tempo-stack.monitoring.svc.cluster.local:3100
+
         server:
           observability:
             tracing:
               enabled: true
+
   destination:
     server: https://kubernetes.default.svc
-    namespace: istio-system                # Kiali deploys INTO istio-system, that's correct
+    namespace: istio-system
+
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+
     syncOptions:
       - CreateNamespace=true
